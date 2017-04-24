@@ -6,8 +6,7 @@
 #
 **/node_modules/
 **/npm/
-npm-debug.log
-samples/**/public
+**/npm-debug.log
 
 .vscode/
 
@@ -22,12 +21,10 @@ out
 
 # git
 *.orig
-samples/react-native/navigation/windows/
 
 .vs
 
-# Ignore production files generated from webpack
-**/public/bundle.js
-**/public/bundle.js.map
-
 *.nupkg
+
+src/README.md
+src/RELEASE_NOTES.md

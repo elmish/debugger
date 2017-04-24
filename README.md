@@ -35,7 +35,7 @@ open Elmish.Debug
 Program.mkProgram init update view
 |> Program.withDebuggerAt (Remote("localhost",8000)) // connect to a server running on localhost:8000
 |> Program.run
-
+```
 
 or, using a custom connection:
 
