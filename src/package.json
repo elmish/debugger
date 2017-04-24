@@ -18,6 +18,7 @@
     "remotedev": "^0.2.5"
   },
   "devDependencies": {
-    "fable-elmish": "^next"
+    "fable-elmish": "next",
+    "fable-powerpack": "next"
   }
 }
