@@ -12,7 +12,6 @@
 
 # F#
 .fake/
-.paket/paket.exe
 packages/
 build/
 obj
