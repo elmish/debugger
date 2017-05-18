@@ -6,9 +6,7 @@
 #
 **/node_modules/
 **/npm/
-**/npm-debug.log
-
-.vscode/
+npm-debug.log
 
 # F#
 .fake/
@@ -23,7 +21,8 @@ out
 
 .vs
 
-*.nupkg
+docs/output
+docs/temp
 
-src/README.md
-src/RELEASE_NOTES.md
+Meta.props
+temp

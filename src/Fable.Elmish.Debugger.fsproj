@@ -1,6 +1,6 @@
 <Project Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk">
+  <Import Project="..\Meta.props" />
   <PropertyGroup>
-    <Version>0.9.0-beta-6</Version>
     <TargetFramework>netstandard1.6</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
@@ -14,7 +14,6 @@
   <!-- Add source files to "fable" folder in Nuget package -->
   <ItemGroup>
     <Content Include="*.fsproj; *.fs" PackagePath="fable\" />
-    <!--<Content Include="src\" PackagePath="fable\src\" />-->
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
