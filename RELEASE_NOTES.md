@@ -1,3 +1,7 @@
+### 0.9.0
+
+* Fable 1.1.x build
+
 ### 0.9.0-beta-6
 
 * Using FSharp.Reflection, all the glory goes to Jonathan Ohlrich
