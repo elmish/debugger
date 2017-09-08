@@ -1,3 +1,7 @@
+### 1.0.0-beta-1
+
+* dotnet 2.0 SDK build
+
 ### 0.9.0
 
 * Fable 1.1.x build

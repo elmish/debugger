@@ -2,7 +2,7 @@ source https://nuget.org/api/v2
 
 nuget FSharp.Core  redirects:force, content:none
 nuget Fable.Core
-nuget Fable.Elmish
+nuget Fable.Elmish 1.0.0-beta-1
 
 group Build
 framework: net46
