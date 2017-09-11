@@ -7,7 +7,7 @@ open Fable.Core
 module Debugger =
     open FSharp.Reflection
 
-    let inline private duName (x:'a) = 
+    let inline private duName (x:'a) =
         match FSharpValue.GetUnionFields(x, typeof<'a>) with
         | case, _ -> case.Name
 
@@ -37,7 +37,7 @@ module Program =
     open Fable.Import
 
     [<PassGenericsAttribute>]
-    let withDebuggerUsing (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let private withDebuggerEveryUsing (every: int) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
             // simple looking one liner to do a recursive deflate
@@ -46,12 +46,16 @@ module Program =
             connection.init (deflated, None)
             model,cmd
 
+        let mutable counter = 0
+
         let update msg model : 'model * Cmd<'msg> =
             let (model',cmd) = program.update msg model
-            connection.send (msg, model')
+            counter <- counter + 1
+            if counter % every = 0  then
+                connection.send (msg, model')
             (model',cmd)
 
-        let subscribe model = 
+        let subscribe model =
             let sub dispatch =
                 function
                 | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
@@ -79,7 +83,7 @@ module Program =
         let onError (text,ex) =
             connection.error (text,ex)
 
-        { program with 
+        { program with
                     init = init
                     update = update
                     subscribe = subscribe
@@ -87,20 +91,36 @@ module Program =
 
 
     [<PassGenericsAttribute>]
-    let withDebuggerAt options program : Program<'a,'model,'msg,'view> = 
+    let withDebuggerUsing connection program : Program<'a,'model,'msg,'view> =
+        withDebuggerEveryUsing 1 connection program
+
+
+    [<PassGenericsAttribute>]
+    let withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
             (Debugger.connect options, program)
             ||> withDebuggerUsing
-        with ex -> 
+        with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
-    
+
     [<PassGenericsAttribute>]
     let withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
             ((Debugger.connect Debugger.ViaExtension),program)
             ||> withDebuggerUsing
-        with ex -> 
+        with ex ->
+            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            program
+
+    [<PassGenericsAttribute>]
+    /// Like `withDebugger` but will connect to the debugger only every X state updates.
+    /// Intended for apps with many state updates per second, like games.
+    let withDebuggerEvery (every: int) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+        try
+            ((Debugger.connect Debugger.ViaExtension),program)
+            ||> withDebuggerEveryUsing every
+        with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
