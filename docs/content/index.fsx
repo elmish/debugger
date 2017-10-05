@@ -28,7 +28,7 @@ paket add nuget Fable.Elmish.Debugger
 
 Follow the monitor installation instructions at [Remotedev tools](https://github.com/zalmoxisus/remotedev) site. 
 
-Among all the monitoring apps mentioned there, for local web debugging in Chrome we recommend using Redux DevTools Chrome extension as the fastest and the most seamless monitoring option.
+Among all the monitoring apps mentioned there, for local web debugging in Chrome we recommend using [Redux DevTools Chrome extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd) as the fastest and the most seamless monitoring option.
 
 ### Program module functions
 Augment your program instance with a debugger, making sure it's the last item in the line of `Program` modifications:
