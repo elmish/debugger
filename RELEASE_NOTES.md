@@ -1,3 +1,7 @@
+### 1.0.0-beta-2
+
+* debounce by Alfonso
+
 ### 1.0.0-beta-1
 
 * dotnet 2.0 SDK build
