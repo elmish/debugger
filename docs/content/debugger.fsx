@@ -98,8 +98,9 @@ module Program =
                 [ [sub]
                   program.subscribe model ]
 
-        let onError (text,ex) =
-            connection.error (text,ex)
+        let onError (text,ex: exn) =
+            program.onError (text, ex)
+            connection.error (text + ex.Message)
 
         { program with
                     init = init

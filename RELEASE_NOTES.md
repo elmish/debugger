@@ -1,3 +1,7 @@
+### 1.0.1
+
+* report errors fix by @zaaack
+
 ### 1.0.0
 
 * debounce by Alfonso

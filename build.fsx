@@ -35,6 +35,14 @@ Target "Install" (fun _ ->
     )
 )
 
+Target "Clean" (fun _ ->
+    projects
+    |> Seq.iter (fun s -> 
+        let dir = IO.Path.GetDirectoryName s
+        dir </> "bin" |> CleanDir
+        dir </> "obj" |> CleanDir)
+)
+
 Target "Build" (fun _ ->
     projects
     |> Seq.iter (fun s -> 
@@ -206,6 +214,7 @@ Target "Publish" DoNothing
 // Build order
 "Meta"
   ==> "InstallDotNetCore"
+  ==> "Clean"
   ==> "Install"
   ==> "Build"
   ==> "Package"
