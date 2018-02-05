@@ -51,8 +51,8 @@ module Program =
         let mutable timeoutActive = false
         let mutable store = Unchecked.defaultof<'msg * 'model>
 
-        let update msg model : 'model * Cmd<'msg> =
-            let (model',cmd) = program.update msg model
+        let update model msg : 'model * Cmd<'msg> =
+            let (model',cmd) = program.update model msg
             match debounce with
             | Some debounce ->
                 store <- msg, model'
@@ -68,6 +68,7 @@ module Program =
 
         let subscribe model =
             let sub dispatch =
+                let setState = program.setState dispatch
                 function
                 | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
                     try
@@ -75,10 +76,10 @@ module Program =
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
                             let state = inflate<'model> (extractState msg)
-                            program.setState state dispatch
+                            setState state
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            program.setState (inflate<'model> state?state) dispatch
+                            setState (inflate<'model> state?state)
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->

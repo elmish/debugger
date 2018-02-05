@@ -3,7 +3,7 @@ storage: none
 
 nuget FSharp.Core  redirects:force, content:none
 nuget Fable.Core
-nuget Fable.Elmish 1.0.0
+nuget Fable.Elmish prerelease
 
 group Build
 framework: net46
