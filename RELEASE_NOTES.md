@@ -1,3 +1,7 @@
+### 2.0.0-beta-1
+
+* reversing the order of args in keeping with elmish-2.0
+
 ### 1.0.1
 
 * report errors fix by @zaaack
