@@ -60,19 +60,20 @@ Target "Meta" (fun _ ->
       "<PackageLicenseUrl>https://raw.githubusercontent.com/fable-elmish/debugger/master/LICENSE.md</PackageLicenseUrl>"
       "<PackageIconUrl>https://raw.githubusercontent.com/fable-elmish/debugger/master/docs/files/img/logo.png</PackageIconUrl>"
       "<RepositoryUrl>https://github.com/fable-elmish/debugger.git</RepositoryUrl>"
+      sprintf "<PackageReleaseNotes>%s</PackageReleaseNotes>" (List.head release.Notes)
       "<PackageTags>fable;elmish;fsharp;debugger</PackageTags>"
       "<Authors>Eugene Tolmachev</Authors>"
       sprintf "<Version>%s</Version>" (string release.SemVer)
       "</PropertyGroup>"
       "</Project>"]
-    |> WriteToFile false "Meta.props"
+    |> WriteToFile false "Directory.Build.props"
 )
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
 Target "Package" (fun _ ->
-    runDotnet "src" "pack"
+    runDotnet "src" "pack /p:GenerateDocumentationFile=true"
 )
 
 Target "PublishNuget" (fun _ ->
