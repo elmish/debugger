@@ -11,6 +11,8 @@ npm-debug.log
 # F#
 .fake/
 packages/
+paket-files
+.paket/load
 build/
 obj
 bin
@@ -26,4 +28,3 @@ docs/temp
 
 Directory.Build.props
 temp
-paket-files

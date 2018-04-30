@@ -1,6 +1,5 @@
 (*** hide ***)
 #I "../../src/bin/Debug/netstandard1.6"
-#I "../../packages/Fable.Elmish/lib/netstandard1.6"
 #r "Fable.Elmish.dll"
 #r "Fable.Elmish.Debugger.dll"
 open Elmish

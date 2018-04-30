@@ -115,6 +115,7 @@ let copyFiles() =
     let header =
         splitStr "\n" """(*** hide ***)
 #I "../../src/bin/Debug/netstandard1.6"
+#I "../../.paket/load/netstandard1.6"
 #r "Fable.Core.dll"
 #r "Fable.Elmish.dll"
 
