@@ -1,6 +1,6 @@
-### 2.0.0-beta-1
+### 1.0.2
 
-* reversing the order of args in keeping with elmish-2.0
+* backporting the build
 
 ### 1.0.1
 
