@@ -21,9 +21,7 @@ module Debugger =
         | Secure of address:string * port:int
 
     let connect =
-        let serialize = createObj ["replacer" ==> fun _ v -> deflate v]
-
-        let fallback = { Options.remote = true; hostname = "remotedev.io"; port = 443; secure = true; getActionType = Some getCase; serialize = serialize }
+        let fallback = { Options.remote = true; hostname = "remotedev.io"; port = 443; secure = true; getActionType = Some getCase }
 
         function
         | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
@@ -38,14 +36,12 @@ module Program =
 
     let [<Global>] private setTimeout(f: unit->unit, ms: int): unit = jsNative
 
-    [<PassGenericsAttribute>]
     let private withDebuggerUsing' (debounce: int option) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
             // simple looking one liner to do a recursive deflate
             // needed otherwise extension gets F# obj
-            let deflated = model |> toJson |> JS.JSON.parse
-            connection.init (deflated, None)
+            connection.init (model, None)
             model,cmd
 
         let mutable timeoutActive = false
@@ -74,11 +70,11 @@ module Program =
                         match msg.payload.``type`` with
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
-                            let state = inflate<'model> (extractState msg)
+                            let state : 'model = unbox (extractState msg)
                             program.setState state dispatch
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            program.setState (inflate<'model> state?state) dispatch
+                            program.setState (unbox state?state) dispatch
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
@@ -102,12 +98,10 @@ module Program =
                     onError = onError }
 
 
-    [<PassGenericsAttribute>]
     let withDebuggerUsing connection program : Program<'a,'model,'msg,'view> =
         withDebuggerUsing' None connection program
 
 
-    [<PassGenericsAttribute>]
     let withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
             (Debugger.connect options, program)
@@ -117,7 +111,6 @@ module Program =
             program
 
 
-    [<PassGenericsAttribute>]
     let withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
             ((Debugger.connect Debugger.ViaExtension),program)
@@ -126,7 +119,6 @@ module Program =
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
-    [<PassGenericsAttribute>]
     /// It will connect to the debugger only once
     /// within the space of a given time (in milliseconds).
     /// Intended for apps with many state updates per second, like games.
