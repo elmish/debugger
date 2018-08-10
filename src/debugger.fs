@@ -5,22 +5,13 @@ open Fable.Core
 
 [<RequireQualifiedAccess>]
 module Debugger =
-    open FSharp.Reflection
-
-    let inline private duName (x:'a) =
-        match FSharpValue.GetUnionFields(x, typeof<'a>) with
-        | case, _ -> case.Name
-
-    let inline private getCase cmd : obj =
-        createObj ["type" ==> duName cmd
-                   "msg" ==> cmd]
 
     type ConnectionOptions =
         | ViaExtension
         | Remote of address:string * port:int
         | Secure of address:string * port:int
 
-    let inline connect opt =
+    let connect getCase opt =
         let fallback = { Options.remote = true; hostname = "remotedev.io"; port = 443; secure = true; getActionType = Some getCase }
 
         match opt with
@@ -50,9 +41,17 @@ module Debugger =
 [<RequireQualifiedAccess>]
 module Program =
     open Elmish
-    open Fable.Import
+    open FSharp.Reflection
 
-    let inline withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline private duName (x:'a) =
+        match FSharpValue.GetUnionFields(x, typeof<'a>) with
+        | case, _ -> case.Name
+
+    let inline private getCase<'msg> (cmd: 'msg) : obj =
+        createObj ["type" ==> duName cmd
+                   "msg" ==> cmd]
+
+    let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
             // simple looking one liner to do a recursive deflate
@@ -106,7 +105,7 @@ module Program =
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.nobounce, Debugger.connect options, program)
+            (Debugger.nobounce, Debugger.connect getCase<'msg> options, program)
             |||> withDebuggerUsing
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
@@ -115,7 +114,7 @@ module Program =
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.nobounce, (Debugger.connect Debugger.ViaExtension),program)
+            (Debugger.nobounce, (Debugger.connect getCase<'msg> Debugger.ViaExtension),program)
             |||> withDebuggerUsing
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
@@ -126,7 +125,7 @@ module Program =
     /// Intended for apps with many state updates per second, like games.
     let inline withDebuggerDebounce (debounceTimeout: int) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.debounce debounceTimeout, (Debugger.connect Debugger.ViaExtension),program)
+            (Debugger.debounce debounceTimeout, (Debugger.connect getCase<'msg> Debugger.ViaExtension),program)
             |||> withDebuggerUsing
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)

@@ -28,8 +28,8 @@ module RemoteDev =
           hostname : string
           secure : bool
           getActionType : ('msg->obj) option }
-    
-    type Action = 
+
+    type Action =
         { ``type``: string
           fields : obj array }
 
@@ -38,7 +38,7 @@ module RemoteDev =
           computedStates : obj array
           currentStateIndex : int
           nextActionId : int }
-    
+
     type Payload =
         { nextLiftedState : LiftedState
           ``type``: string }
@@ -50,7 +50,7 @@ module RemoteDev =
           payload : Payload }
 
     type Listener = Msg -> unit
-    
+
     type Unsubscribe = unit -> unit
 
     type Connection =
@@ -61,10 +61,10 @@ module RemoteDev =
         abstract error: obj -> unit
 
     [<Import("connect","remotedev")>]
-    let connect<'msg> : Options<'msg> -> Connection = jsNative
+    let connect<'msg> (options: Options<'msg>): Connection = jsNative
 
     [<Import("connectViaExtension","remotedev")>]
-    let connectViaExtension<'msg> : Options<'msg> -> Connection = jsNative
-    
+    let connectViaExtension<'msg> (options: Options<'msg>): Connection = jsNative
+
     [<Import("extractState","remotedev")>]
-    let extractState : obj -> obj = jsNative
+    let extractState (x: obj): obj = jsNative
