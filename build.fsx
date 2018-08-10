@@ -5,7 +5,8 @@
 open System
 open System.IO
 open Fake
-open Fake.NpmHelper
+open Fake.IO
+open Fake.IO.FileSystemOperators
 open Fake.ReleaseNotesHelper
 open Fake.Git
 
@@ -35,12 +36,12 @@ Target "Install" (fun _ ->
     )
 )
 
-Target "Clean" (fun _ ->
+Target.Create "Clean" (fun _ ->
     projects
     |> Seq.iter (fun s ->
         let dir = IO.Path.GetDirectoryName s
-        dir </> "bin" |> CleanDir
-        dir </> "obj" |> CleanDir)
+        dir </> "bin" |> Shell.cleanDir
+        dir </> "obj" |> Shell.cleanDir)
 )
 
 Target "Build" (fun _ ->

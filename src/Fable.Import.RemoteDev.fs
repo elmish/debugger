@@ -22,12 +22,12 @@ module RemoteDev =
         [<Literal>]
         let JumpToAction = "JUMP_TO_ACTION"
 
-    type Options =
+    type Options<'msg> =
         { remote : bool
           port : int
           hostname : string
           secure : bool
-          getActionType : (obj->obj) option }
+          getActionType : ('msg->obj) option }
     
     type Action = 
         { ``type``: string
@@ -61,10 +61,10 @@ module RemoteDev =
         abstract error: obj -> unit
 
     [<Import("connect","remotedev")>]
-    let connect : Options -> Connection = jsNative
+    let connect<'msg> : Options<'msg> -> Connection = jsNative
 
     [<Import("connectViaExtension","remotedev")>]
-    let connectViaExtension : Options -> Connection = jsNative
+    let connectViaExtension<'msg> : Options<'msg> -> Connection = jsNative
     
     [<Import("extractState","remotedev")>]
     let extractState : obj -> obj = jsNative

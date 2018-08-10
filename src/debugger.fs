@@ -20,23 +20,39 @@ module Debugger =
         | Remote of address:string * port:int
         | Secure of address:string * port:int
 
-    let connect =
+    let inline connect opt =
         let fallback = { Options.remote = true; hostname = "remotedev.io"; port = 443; secure = true; getActionType = Some getCase }
 
-        function
+        match opt with
         | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
         | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false; getActionType = None }
         | Secure (address,port) -> { fallback with hostname = address; port = port; getActionType = None }
-        >> connectViaExtension
+        |> connectViaExtension
+
+    type Send<'msg,'model> = 'msg*'model -> unit
+    type Debounce<'msg,'model> = Send<'msg,'model> -> 'msg -> 'model -> unit
+
+    let [<Global>] private setTimeout(f: unit->unit, ms: int): unit = jsNative
+
+    let inline nobounce send msg model = send(msg,model)
+    let debounce timeoutMs =
+        let mutable timeoutActive = false
+        let mutable store = Unchecked.defaultof<'msg * 'model>
+        fun send msg model ->
+            store <- msg, model
+            if not timeoutActive then
+                timeoutActive <- true
+                setTimeout((fun () ->
+                    send store
+                    timeoutActive <- false), timeoutMs)
+
 
 [<RequireQualifiedAccess>]
 module Program =
     open Elmish
     open Fable.Import
 
-    let [<Global>] private setTimeout(f: unit->unit, ms: int): unit = jsNative
-
-    let private withDebuggerUsing' (debounce: int option) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
             // simple looking one liner to do a recursive deflate
@@ -44,22 +60,9 @@ module Program =
             connection.init (model, None)
             model,cmd
 
-        let mutable timeoutActive = false
-        let mutable store = Unchecked.defaultof<'msg * 'model>
-
         let update msg model : 'model * Cmd<'msg> =
             let (model',cmd) = program.update msg model
-            match debounce with
-            | Some debounce ->
-                store <- msg, model'
-                if not timeoutActive then
-                    timeoutActive <- true
-                    setTimeout((fun () ->
-                        let msg, model' = store
-                        connection.send (msg, model')
-                        timeoutActive <- false), debounce)
-            | None ->
-                connection.send (msg, model')
+            debounce connection.send msg model'
             (model',cmd)
 
         let subscribe model =
@@ -97,35 +100,34 @@ module Program =
                     subscribe = subscribe
                     onError = onError }
 
+    let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =
+        withDebuggerUsing Debugger.nobounce connection program
 
-    let withDebuggerUsing connection program : Program<'a,'model,'msg,'view> =
-        withDebuggerUsing' None connection program
 
-
-    let withDebuggerAt options program : Program<'a,'model,'msg,'view> =
+    let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.connect options, program)
-            ||> withDebuggerUsing
+            (Debugger.nobounce, Debugger.connect options, program)
+            |||> withDebuggerUsing
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
 
-    let withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            ((Debugger.connect Debugger.ViaExtension),program)
-            ||> withDebuggerUsing
+            (Debugger.nobounce, (Debugger.connect Debugger.ViaExtension),program)
+            |||> withDebuggerUsing
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
-    /// It will connect to the debugger only once
+    /// It will send the update to the debugger only once
     /// within the space of a given time (in milliseconds).
     /// Intended for apps with many state updates per second, like games.
-    let withDebuggerDebounce (debounce: int) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline withDebuggerDebounce (debounceTimeout: int) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            ((Debugger.connect Debugger.ViaExtension),program)
-            ||> withDebuggerUsing' (Some debounce)
+            (Debugger.debounce debounceTimeout, (Debugger.connect Debugger.ViaExtension),program)
+            |||> withDebuggerUsing
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program

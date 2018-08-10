@@ -1,3 +1,7 @@
+### 2.0.0-beta-5
+
+* inlining for Fable2 reflection to work
+
 ### 2.0.0-beta-4
 
 * Re-releasing v1 for Fable2
