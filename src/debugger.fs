@@ -54,8 +54,6 @@ module Program =
     let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
-            // simple looking one liner to do a recursive deflate
-            // needed otherwise extension gets F# obj
             connection.init (model, None)
             model,cmd
 

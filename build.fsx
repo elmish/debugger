@@ -4,39 +4,33 @@
 
 open System
 open System.IO
-open Fake
+open Fake.Core
 open Fake.IO
 open Fake.IO.FileSystemOperators
-open Fake.ReleaseNotesHelper
-open Fake.Git
-
+open Fake.Tools.Git
+open Fake.DotNet
+open Fake.IO.Globbing.Operators
+open Fake.Core.TargetOperators
 
 // Filesets
 let projects  =
       !! "src/**.fsproj"
 
 
-let dotnetcliVersion = DotNetCli.GetDotNetSDKVersionFromGlobalJson()
-let mutable dotnetExePath = "dotnet"
-
-let runDotnet workingDir =
-    DotNetCli.RunCommand (fun p -> { p with ToolPath = dotnetExePath
-                                            WorkingDir = workingDir } )
-
-Target "InstallDotNetCore" (fun _ ->
-   dotnetExePath <- DotNetCli.InstallDotNetSDK dotnetcliVersion
+Target.create "InstallDotNetCore" (fun _ ->
+   DotNet.Options.Create() |> DotNet.install id |> ignore
 )
 
 
-Target "Install" (fun _ ->
+Target.create "Install" (fun _ ->
     projects
     |> Seq.iter (fun s ->
         let dir = IO.Path.GetDirectoryName s
-        runDotnet dir "restore"
+        DotNet.restore id dir
     )
 )
 
-Target.Create "Clean" (fun _ ->
+Target.create "Clean" (fun _ ->
     projects
     |> Seq.iter (fun s ->
         let dir = IO.Path.GetDirectoryName s
@@ -44,16 +38,16 @@ Target.Create "Clean" (fun _ ->
         dir </> "obj" |> Shell.cleanDir)
 )
 
-Target "Build" (fun _ ->
+Target.create "Build" (fun _ ->
     projects
     |> Seq.iter (fun s ->
         let dir = IO.Path.GetDirectoryName s
-        runDotnet dir "build")
+        DotNet.build id dir)
 )
 
-let release = LoadReleaseNotes "RELEASE_NOTES.md"
+let release = ReleaseNotes.load "RELEASE_NOTES.md"
 
-Target "Meta" (fun _ ->
+Target.create "Meta" (fun _ ->
     [ "<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">"
       "<PropertyGroup>"
       "<Description>Debugger for Elmish apps</Description>"
@@ -67,19 +61,20 @@ Target "Meta" (fun _ ->
       sprintf "<Version>%s</Version>" (string release.SemVer)
       "</PropertyGroup>"
       "</Project>"]
-    |> WriteToFile false "Directory.Build.props"
+    |> File.write false "Directory.Build.props"
 )
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
-Target "Package" (fun _ ->
-    runDotnet "src" "pack /p:GenerateDocumentationFile=true"
+Target.create "Package" (fun _ ->
+    DotNet.pack id "src"
 )
 
-Target "PublishNuget" (fun _ ->
-    let args = sprintf "nuget push Fable.Elmish.Debugger.%s.nupkg -s nuget.org -k %s" (string release.SemVer) (environVar "nugetkey")
-    runDotnet "src/bin/Debug" args
+Target.create "PublishNuget" (fun _ ->
+    let args = sprintf "push Fable.Elmish.Debugger.%s.nupkg -s nuget.org -k %s" (string release.SemVer) (Environment.environVar "nugetkey")
+    let result = DotNet.exec (fun a -> a |> DotNet.Options.withWorkingDirectory "src/bin/Release") "nuget" args
+    if (not result.OK) then failwithf "%A" result.Errors
 )
 
 
@@ -91,22 +86,26 @@ let gitHome = sprintf "https://github.com/%s" gitOwner
 
 let fakePath = "packages" </> "build" </> "FAKE" </> "tools" </> "FAKE.exe"
 let fakeStartInfo script workingDirectory args fsiargs environmentVars =
-    (fun (info: System.Diagnostics.ProcessStartInfo) ->
-        info.FileName <- System.IO.Path.GetFullPath fakePath
-        info.Arguments <- sprintf "%s --fsiargs -d:FAKE %s \"%s\"" args fsiargs script
-        info.WorkingDirectory <- workingDirectory
-        let setVar k v =
-            info.EnvironmentVariables.[k] <- v
-        for (k, v) in environmentVars do
-            setVar k v
-        setVar "MSBuild" msBuildExe
-        setVar "GIT" Git.CommandHelper.gitPath
-        setVar "FSI" fsiPath)
+        (fun (info: ProcStartInfo) ->
+        let env =
+            seq [
+                yield "MSBuild", MSBuild.msBuildExe
+                yield "GIT", CommandHelper.gitPath
+                yield "FSI", Fake.FSIHelper.fsiPath
+            ]
+            |> Seq.append environmentVars
+            |> Map.ofSeq
+        { info with
+            FileName = System.IO.Path.GetFullPath fakePath
+            Arguments = sprintf "%s --fsiargs -d:FAKE %s \"%s\"" args fsiargs script
+            WorkingDirectory = workingDirectory
+            Environment = env }
+    )
 
 /// Run the given buildscript with FAKE.exe
 let executeFAKEWithOutput workingDirectory script fsiargs envArgs =
     let exitCode =
-        ExecProcessWithLambdas
+         Process.execRaw
             (fakeStartInfo script workingDirectory "" fsiargs envArgs)
             TimeSpan.MaxValue false ignore ignore
     System.Threading.Thread.Sleep 1000
@@ -114,9 +113,9 @@ let executeFAKEWithOutput workingDirectory script fsiargs envArgs =
 
 let copyFiles() =
     let header =
-        splitStr "\n" """(*** hide ***)
-#I "../../src/bin/Debug/netstandard1.6"
-#I "../../.paket/load/netstandard1.6"
+        String.splitStr "\n" """(*** hide ***)
+#I "../../src/bin/Release/netstandard2.0"
+#I "../../.paket/load/netstandard2.0"
 #r "Fable.Core.dll"
 #r "Fable.Elmish.dll"
 
@@ -124,14 +123,14 @@ let copyFiles() =
 *)"""
 
     !!"src/*.fs"
-    |> Seq.map (fun fn -> ReadFile fn |> Seq.append header, fn)
+    |> Seq.map (fun fn -> File.read fn |> Seq.append header, fn)
     |> Seq.iter (fun (lines,fn) ->
         let fsx = Path.Combine("docs/content",Path.ChangeExtension(fn |> Path.GetFileName, "fsx"))
-        lines |> WriteFile fsx)
+        lines |> File.writeNew fsx)
 
 // Documentation
 let buildDocumentationTarget fsiargs target =
-    trace (sprintf "Building documentation (%s), this could take some time, please wait..." target)
+    Trace.trace (sprintf "Building documentation (%s), this could take some time, please wait..." target)
     let exit = executeFAKEWithOutput "docs/tools" "generate.fsx" fsiargs ["target", target]
     if exit <> 0 then
         failwith "generating reference documentation failed"
@@ -139,27 +138,27 @@ let buildDocumentationTarget fsiargs target =
 
 let generateHelp fail debug =
     copyFiles()
-    CleanDir "docs/tools/.fake"
+    Shell.cleanDir "docs/tools/.fake"
     let args =
         if debug then "--define:HELP"
         else "--define:RELEASE --define:HELP"
     try
         buildDocumentationTarget args "Default"
-        traceImportant "Help generated"
+        Trace.traceImportant "Help generated"
     with
     | e when not fail ->
-        traceImportant "generating help documentation failed"
+        Trace.traceImportant "generating help documentation failed"
 
-Target "GenerateDocs" (fun _ ->
+Target.create "GenerateDocs" (fun _ ->
     generateHelp true false
 )
 
-Target "WatchDocs" (fun _ ->
-    use watcher = !! "docs/content/**/*.*" |> WatchChanges (fun changes ->
+Target.create "WatchDocs" (fun _ ->
+    use watcher = !! "docs/content/**/*.*" |> ChangeWatcher.run (fun changes ->
          generateHelp true true
     )
 
-    traceImportant "Waiting for help edits. Press any key to stop."
+    Trace.traceImportant "Waiting for help edits. Press any key to stop."
 
     System.Console.ReadKey() |> ignore
 
@@ -169,50 +168,51 @@ Target "WatchDocs" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Release Scripts
 
-Target "ReleaseDocs" (fun _ ->
+Target.create "ReleaseDocs" (fun _ ->
     let tempDocsDir = "temp/gh-pages"
-    CleanDir tempDocsDir
+    Shell.cleanDir tempDocsDir
     Repository.cloneSingleBranch "" (gitHome + "/" + gitName + ".git") "gh-pages" tempDocsDir
 
-    CopyRecursive "docs/output" tempDocsDir true |> tracefn "%A"
-    StageAll tempDocsDir
-    Git.Commit.Commit tempDocsDir (sprintf "Update generated documentation for version %s" release.NugetVersion)
+    Shell.copyRecursive "docs/output" tempDocsDir true |> Trace.tracefn "%A"
+    Staging.stageAll tempDocsDir
+    Commit.exec tempDocsDir (sprintf "Update generated documentation for version %s" release.NugetVersion)
     Branches.push tempDocsDir
 )
 
 #load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
 open Octokit
 
-Target "Release" (fun _ ->
+Target.create "Release" (fun _ ->
     let user =
-        match getBuildParam "github-user" with
-        | s when not (String.IsNullOrWhiteSpace s) -> s
-        | _ -> getUserInput "Username: "
+        match Environment.environVarOrDefault "github-user" String.Empty with
+        | s when not (String.isNullOrWhiteSpace s) -> s
+        | _ -> UserInput.getUserInput "Username: "
     let pw =
-        match getBuildParam "github-pw" with
-        | s when not (String.IsNullOrWhiteSpace s) -> s
-        | _ -> getUserPassword "Password: "
+        match Environment.environVarOrDefault "github-pw" String.Empty with
+        | s when not (String.isNullOrWhiteSpace s) -> s
+        | _ -> UserInput.getUserPassword "Password: "
     let remote =
-        Git.CommandHelper.getGitResult "" "remote -v"
+        CommandHelper.getGitResult "" "remote -v"
         |> Seq.filter (fun (s: string) -> s.EndsWith("(push)"))
         |> Seq.tryFind (fun (s: string) -> s.Contains(gitOwner + "/" + gitName))
         |> function None -> gitHome + "/" + gitName | Some (s: string) -> s.Split().[0]
 
-    StageAll ""
-    Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
+    Staging.stageAll ""
+    Commit.exec "" (sprintf "Bump version to %s" release.NugetVersion)
     Branches.pushBranch "" remote (Information.getBranchName "")
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" remote release.NugetVersion
 
     // release on github
+
     createClient user pw
     |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes
     |> releaseDraft
     |> Async.RunSynchronously
 )
 
-Target "Publish" DoNothing
+Target.create "Publish" ignore
 
 // Build order
 "Meta"
@@ -234,4 +234,4 @@ Target "Publish" DoNothing
 
 
 // start build
-RunTargetOrDefault "Build"
+Target.runOrDefault "Build"
