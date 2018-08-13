@@ -1,5 +1,6 @@
 // include Fake libs
 #r "./packages/build/FAKE/tools/FakeLib.dll"
+open Fake.DotNet
 #r "System.IO.Compression.FileSystem"
 
 open System
@@ -8,7 +9,6 @@ open Fake.Core
 open Fake.IO
 open Fake.IO.FileSystemOperators
 open Fake.Tools.Git
-open Fake.DotNet
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
 
@@ -18,7 +18,7 @@ let projects  =
 
 
 Target.create "InstallDotNetCore" (fun _ ->
-   DotNet.Options.Create() |> DotNet.install id |> ignore
+   DotNet.Options.Create() |> DotNet.install (fun o -> { o with Version = DotNet.CliVersion.GlobalJson}) |> ignore
 )
 
 
