@@ -3,8 +3,8 @@ storage: none
 generate_load_scripts: true
 
 nuget FSharp.Core  redirects:force, content:none
-nuget Fable.Core prerelease
-nuget Fable.Elmish prerelease
+nuget Fable.Core
+nuget Fable.Elmish
 
 group Build
 framework: net46

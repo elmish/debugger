@@ -1,3 +1,7 @@
+### 2.0.0
+
+* Stable release for Fable2
+
 ### 2.0.0-beta-5
 
 * inlining for Fable2 reflection to work
