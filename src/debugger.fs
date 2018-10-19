@@ -1,7 +1,9 @@
 namespace Elmish.Debug
+
+open Fable.Import
 open Fable.Import.RemoteDev
 open Fable.Core.JsInterop
-open Fable.Core
+open Thoth.Json
 
 [<RequireQualifiedAccess>]
 module Debugger =
@@ -12,7 +14,18 @@ module Debugger =
         | Secure of address:string * port:int
 
     let connect getCase opt =
-        let fallback = { Options.remote = true; hostname = "remotedev.io"; port = 443; secure = true; getActionType = Some getCase }
+        let serialize = createObj [
+            "options" ==> createObj [
+                "function" ==> fun v -> Encode.Auto.toString(0, v)
+            ]
+        ]
+
+        let fallback = { Options.remote = true
+                         hostname = "remotedev.io"
+                         port = 443
+                         secure = true
+                         getActionType = Some getCase
+                         serialize = serialize }
 
         match opt with
         | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
@@ -23,9 +36,8 @@ module Debugger =
     type Send<'msg,'model> = 'msg*'model -> unit
     type Debounce<'msg,'model> = Send<'msg,'model> -> 'msg -> 'model -> unit
 
-    let [<Global>] private setTimeout(f: unit->unit, ms: int): unit = jsNative
-
     let inline nobounce send msg model = send(msg,model)
+
     let debounce timeoutMs =
         let mutable timeoutActive = false
         let mutable store = Unchecked.defaultof<'msg * 'model>
@@ -33,9 +45,9 @@ module Debugger =
             store <- msg, model
             if not timeoutActive then
                 timeoutActive <- true
-                setTimeout((fun () ->
+                JS.setTimeout (fun () ->
                     send store
-                    timeoutActive <- false), timeoutMs)
+                    timeoutActive <- false) timeoutMs |> ignore
 
 
 [<RequireQualifiedAccess>]
@@ -51,10 +63,11 @@ module Program =
         createObj ["type" ==> duName cmd
                    "msg" ==> cmd]
 
-    let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (decoder: Decode.Decoder<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
-            connection.init (model, None)
+            let deflated = Encode.Auto.toString(0, model) |> JS.JSON.parse
+            connection.init (deflated, None)
             model,cmd
 
         let update msg model : 'model * Cmd<'msg> =
@@ -70,11 +83,12 @@ module Program =
                         match msg.payload.``type`` with
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
-                            let state : 'model = unbox (extractState msg)
+                            let state : 'model = extractState msg |> Decode.unwrap "$" decoder
                             program.setState state dispatch
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            program.setState (unbox state?state) dispatch
+                            let state = state?state |> Decode.unwrap "$" decoder
+                            program.setState state dispatch
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
@@ -98,22 +112,23 @@ module Program =
                     onError = onError }
 
     let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =
-        withDebuggerUsing Debugger.nobounce connection program
-
+        let decoder = Decode.Auto.generateDecoder()
+        withDebuggerUsing Debugger.nobounce decoder connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.nobounce, Debugger.connect getCase<'msg> options, program)
-            |||> withDebuggerUsing
+            let decoder = Decode.Auto.generateDecoder()
+            let connection = Debugger.connect getCase<'msg> options
+            withDebuggerUsing Debugger.nobounce decoder connection program
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
-
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.nobounce, (Debugger.connect getCase<'msg> Debugger.ViaExtension),program)
-            |||> withDebuggerUsing
+            let decoder = Decode.Auto.generateDecoder()
+            let connection = Debugger.connect getCase<'msg> Debugger.ViaExtension
+            withDebuggerUsing Debugger.nobounce decoder connection program
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
@@ -123,8 +138,9 @@ module Program =
     /// Intended for apps with many state updates per second, like games.
     let inline withDebuggerDebounce (debounceTimeout: int) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            (Debugger.debounce debounceTimeout, (Debugger.connect getCase<'msg> Debugger.ViaExtension),program)
-            |||> withDebuggerUsing
+            let decoder = Decode.Auto.generateDecoder()
+            let connection = Debugger.connect getCase<'msg> Debugger.ViaExtension
+            withDebuggerUsing (Debugger.debounce debounceTimeout) decoder connection program
         with ex ->
             Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
