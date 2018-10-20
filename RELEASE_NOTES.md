@@ -1,3 +1,7 @@
+### 2.0.1
+
+* Thoth serialization by Alfonso
+
 ### 2.0.0
 
 * Stable release for Fable2
