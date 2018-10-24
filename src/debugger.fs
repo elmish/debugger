@@ -15,9 +15,16 @@ module Debugger =
 
     let connect getCase opt =
         let serialize = createObj [
-            "options" ==> createObj [
-                "function" ==> fun v -> Encode.Auto.toString(0, v)
-            ]
+            // TODO: This should be exposed by Thoth.Json
+            "replacer" ==> fun (_key: string) (value: obj) ->
+                match value with
+                // Match string before so it's not considered an IEnumerable
+                | :? string -> value
+                | :? System.Collections.IEnumerable ->
+                    if JS.Array.isArray(value)
+                    then value
+                    else JS.Array.from(value :?> JS.Iterable<obj>) |> box
+                | _ -> value
         ]
 
         let fallback = { Options.remote = true
@@ -83,12 +90,14 @@ module Program =
                         match msg.payload.``type`` with
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
-                            let state : 'model = extractState msg |> Decode.unwrap "$" decoder
-                            program.setState state dispatch
+                            match extractState msg |> Decode.fromValue "$" decoder with
+                            | Ok state -> program.setState state dispatch
+                            | Error er -> Browser.console.error(er)
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            let state = state?state |> Decode.unwrap "$" decoder
-                            program.setState state dispatch
+                            match Decode.fromValue "$" decoder state?state with
+                            | Ok state -> program.setState state dispatch
+                            | Error er -> Browser.console.error(er)
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
