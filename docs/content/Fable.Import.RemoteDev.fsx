@@ -1,6 +1,6 @@
 ﻿(*** hide ***)
-#I "../../src/bin/Debug/netstandard1.6"
-#I "../../.paket/load/netstandard1.6"
+#I "../../src/bin/Release/netstandard2.0"
+#I "../../.paket/load/netstandard2.0"
 #r "Fable.Core.dll"
 #r "Fable.Elmish.dll"
 
@@ -30,15 +30,15 @@ module RemoteDev =
         [<Literal>]
         let JumpToAction = "JUMP_TO_ACTION"
 
-    type Options =
+    type Options<'msg> =
         { remote : bool
           port : int
           hostname : string
           secure : bool
-          getActionType : (obj->obj) option
-          serialize : obj }
-    
-    type Action = 
+          getActionType : ('msg->obj) option
+          serialize: obj }
+
+    type Action =
         { ``type``: string
           fields : obj array }
 
@@ -47,7 +47,7 @@ module RemoteDev =
           computedStates : obj array
           currentStateIndex : int
           nextActionId : int }
-    
+
     type Payload =
         { nextLiftedState : LiftedState
           ``type``: string }
@@ -59,7 +59,7 @@ module RemoteDev =
           payload : Payload }
 
     type Listener = Msg -> unit
-    
+
     type Unsubscribe = unit -> unit
 
     type Connection =
@@ -70,10 +70,10 @@ module RemoteDev =
         abstract error: obj -> unit
 
     [<Import("connect","remotedev")>]
-    let connect : Options -> Connection = jsNative
+    let connect<'msg> (options: Options<'msg>): Connection = jsNative
 
     [<Import("connectViaExtension","remotedev")>]
-    let connectViaExtension : Options -> Connection = jsNative
-    
+    let connectViaExtension<'msg> (options: Options<'msg>): Connection = jsNative
+
     [<Import("extractState","remotedev")>]
-    let extractState : obj -> obj = jsNative
+    let extractState (x: obj): obj = jsNative

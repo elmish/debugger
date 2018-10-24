@@ -2,7 +2,7 @@ language: csharp
 
 sudo: false  # use the new container-based Travis infrastructure
 dist: trusty
-dotnet: 2.1.4
+dotnet: 2.1.402
 
 cache:
   yarn: true
