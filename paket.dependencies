@@ -4,7 +4,9 @@ generate_load_scripts: true
 
 nuget FSharp.Core  redirects:force, content:none
 nuget Fable.Core
-nuget Fable.Elmish 3.0.0-beta-2 beta
+nuget Fable.Elmish beta
+nuget Thoth.Json
+nuget Fable.Import.Browser
 
 group Build
 framework: net46

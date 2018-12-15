@@ -1,3 +1,5 @@
 FSharp.Core
 Fable.Core
 Fable.Elmish
+Thoth.Json
+Fable.Import.Browser
