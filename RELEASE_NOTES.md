@@ -1,3 +1,7 @@
+### 2.0.3
+
+* Support for message types other than F# DUs, credits: @mathid
+
 ### 2.0.2
 
 * Thoth serialization by Alfonso
