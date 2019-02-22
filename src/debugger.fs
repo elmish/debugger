@@ -63,8 +63,12 @@ module Program =
     open FSharp.Reflection
 
     let inline private duName (x:'a) =
-        match FSharpValue.GetUnionFields(x, typeof<'a>) with
-        | case, _ -> case.Name
+        let t = typeof<'a>
+        if (isNull t?cases)
+        then "not-a-f#-union"
+        else
+            match FSharpValue.GetUnionFields(x, t) with
+            | case, _ -> case.Name
 
     let inline private getCase<'msg> (cmd: 'msg) : obj =
         createObj ["type" ==> duName cmd
