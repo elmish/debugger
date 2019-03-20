@@ -3,6 +3,7 @@ namespace Elmish.Debug
 open Fable.Import
 open Fable.Import.RemoteDev
 open Fable.Core.JsInterop
+open Fable.Core
 open Thoth.Json
 
 [<RequireQualifiedAccess>]
@@ -23,7 +24,7 @@ module Debugger =
                 | :? System.Collections.IEnumerable ->
                     if JS.Array.isArray(value)
                     then value
-                    else JS.Array.from(value :?> JS.Iterable<obj>) |> box
+                    else value :?> obj seq |> Seq.toArray |> box
                 | _ -> value
         ]
 
@@ -74,7 +75,7 @@ module Program =
         createObj ["type" ==> duName cmd
                    "msg" ==> cmd]
 
-    let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (decoder: Decode.Decoder<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (decoder: Decoder<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init a =
             let (model,cmd) = program.init a
             let deflated = Encode.Auto.toString(0, model) |> JS.JSON.parse
@@ -96,16 +97,16 @@ module Program =
                         | PayloadTypes.JumpToState ->
                             match extractState msg |> Decode.fromValue "$" decoder with
                             | Ok state -> program.setState state dispatch
-                            | Error er -> Browser.console.error(er)
+                            | Error er -> JS.console.error(er)
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
                             match Decode.fromValue "$" decoder state?state with
                             | Ok state -> program.setState state dispatch
-                            | Error er -> Browser.console.error(er)
+                            | Error er -> JS.console.error(er)
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
-                        Fable.Import.Browser.console.error ("Unable to process monitor command", msg, ex)
+                        JS.console.error ("Unable to process monitor command", msg, ex)
                 | _ -> ()
                 |> connection.subscribe
                 |> ignore
@@ -134,7 +135,7 @@ module Program =
             let connection = Debugger.connect getCase<'msg> options
             withDebuggerUsing Debugger.nobounce decoder connection program
         with ex ->
-            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
@@ -143,7 +144,7 @@ module Program =
             let connection = Debugger.connect getCase<'msg> Debugger.ViaExtension
             withDebuggerUsing Debugger.nobounce decoder connection program
         with ex ->
-            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
     /// It will send the update to the debugger only once
@@ -155,5 +156,5 @@ module Program =
             let connection = Debugger.connect getCase<'msg> Debugger.ViaExtension
             withDebuggerUsing (Debugger.debounce debounceTimeout) decoder connection program
         with ex ->
-            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
