@@ -76,18 +76,18 @@ module Program =
                    "msg" ==> cmd]
 
     let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (decoder: Decoder<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
-        let init a =
-            let (model,cmd) = program.init a
+        let init userInit a =
+            let (model,cmd) = userInit a
             let deflated = Encode.Auto.toString(0, model) |> JS.JSON.parse
             connection.init (deflated, None)
             model,cmd
 
-        let update msg model : 'model * Cmd<'msg> =
-            let (model',cmd) = program.update msg model
+        let update userUpdate msg model : 'model * Cmd<'msg> =
+            let (model',cmd) = userUpdate msg model
             debounce connection.send msg model'
             (model',cmd)
 
-        let subscribe model =
+        let subscribe userSubscribe model =
             let sub dispatch =
                 function
                 | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
@@ -96,12 +96,12 @@ module Program =
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
                             match extractState msg |> Decode.fromValue "$" decoder with
-                            | Ok state -> program.setState state dispatch
+                            | Ok state -> (program |> Program.setState) state dispatch
                             | Error er -> JS.console.error(er)
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
                             match Decode.fromValue "$" decoder state?state with
-                            | Ok state -> program.setState state dispatch
+                            | Ok state -> (program |> Program.setState) state dispatch
                             | Error er -> JS.console.error(er)
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
@@ -113,17 +113,15 @@ module Program =
 
             Cmd.batch
                 [ [sub]
-                  program.subscribe model ]
+                  userSubscribe model ]
 
-        let onError (text,ex: exn) =
-            program.onError (text, ex)
+        let onError userOnError (text,ex: exn) =
+            userOnError (text, ex)
             connection.error (text + ex.Message)
 
-        { program with
-                    init = init
-                    update = update
-                    subscribe = subscribe
-                    onError = onError }
+        program
+        |> Program.map init update id id subscribe
+        |> Program.mapErrorHandler onError
 
     let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =
         let decoder = Decode.Auto.generateDecoder()
