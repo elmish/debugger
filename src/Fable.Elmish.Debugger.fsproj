@@ -6,7 +6,6 @@
   <ItemGroup>
     <Compile Include="Fable.Import.RemoteDev.fs" />
     <Compile Include="debugger.fs" />
-    <ProjectReference Include="../../elmish/src/Fable.Elmish.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="*.fsproj; *.fs" PackagePath="fable\" />

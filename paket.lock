@@ -5,7 +5,7 @@ NUGET
   remote: https://www.nuget.org/api/v2
     Fable.Core (3.0.0-beta-005)
       FSharp.Core (>= 4.5.2)
-    Fable.Elmish (3.0.0-beta-6)
+    Fable.Elmish (3.0.0-beta-7)
       Fable.Core (>= 3.0.0-beta-004)
       FSharp.Core (>= 4.6.2)
     FSharp.Core (4.6.2) - content: none, redirects: force
