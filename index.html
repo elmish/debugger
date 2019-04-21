@@ -58,11 +58,11 @@ For SPAs running in a browser, it's as easy as installing a plugin.</p>
 <span class="l">4: </span>
 <span class="l">5: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="i">Elmish</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="i">Debug</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span class="id">Elmish</span><span class="pn">.</span><span class="id">Debug</span>
 
-<span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="i">Program</span><span class="o">.</span><span class="i">mkProgram</span> <span class="i">init</span> <span class="i">update</span> <span class="i">view</span>
-<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs3', 5)" onmouseover="showTip(event, 'fs3', 5)" class="t">Program</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs4', 6)" onmouseover="showTip(event, 'fs4', 6)" class="f">withDebugger</span> <span class="c">// connect to a devtools monitor via Chrome/Firefox extension if available</span>
-<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs3', 7)" onmouseover="showTip(event, 'fs3', 7)" class="i">Program</span><span class="o">.</span><span class="i">run</span>
+<span class="id">Program</span><span class="pn">.</span><span class="id">mkProgram</span> <span class="id">init</span> <span class="id">update</span> <span class="id">view</span>
+<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">withDebugger</span> <span class="c">// connect to a devtools monitor via Chrome/Firefox extension if available</span>
+<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">run</span>
 </code></pre></td>
 </tr>
 </table>
@@ -73,11 +73,11 @@ For SPAs running in a browser, it's as easy as installing a plugin.</p>
 <span class="l">4: </span>
 <span class="l">5: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 8)" onmouseover="showTip(event, 'fs1', 8)" class="i">Elmish</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs2', 9)" onmouseover="showTip(event, 'fs2', 9)" class="i">Debug</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span class="id">Elmish</span><span class="pn">.</span><span class="id">Debug</span>
 
-<span onmouseout="hideTip(event, 'fs3', 10)" onmouseover="showTip(event, 'fs3', 10)" class="i">Program</span><span class="o">.</span><span class="i">mkProgram</span> <span class="i">init</span> <span class="i">update</span> <span class="i">view</span>
-<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs3', 11)" onmouseover="showTip(event, 'fs3', 11)" class="t">Program</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs4', 12)" onmouseover="showTip(event, 'fs4', 12)" class="f">withDebuggerAt</span> (<span class="i">Remote</span>(<span class="s">&quot;localhost&quot;</span>,<span class="n">8000</span>)) <span class="c">// connect to a server running on localhost:8000</span>
-<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs3', 13)" onmouseover="showTip(event, 'fs3', 13)" class="i">Program</span><span class="o">.</span><span class="i">run</span>
+<span class="id">Program</span><span class="pn">.</span><span class="id">mkProgram</span> <span class="id">init</span> <span class="id">update</span> <span class="id">view</span>
+<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">withDebuggerAt</span> <span class="pn">(</span><span class="id">Remote</span><span class="pn">(</span><span class="s">&quot;localhost&quot;</span><span class="pn">,</span><span class="n">8000</span><span class="pn">)</span><span class="pn">)</span> <span class="c">// connect to a server running on localhost:8000</span>
+<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">run</span>
 </code></pre></td>
 </tr>
 </table>
@@ -90,26 +90,20 @@ For SPAs running in a browser, it's as easy as installing a plugin.</p>
 <span class="l">6: </span>
 <span class="l">7: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 14)" onmouseover="showTip(event, 'fs1', 14)" class="i">Elmish</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs2', 15)" onmouseover="showTip(event, 'fs2', 15)" class="i">Debug</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span class="id">Elmish</span><span class="pn">.</span><span class="id">Debug</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 16)" onmouseover="showTip(event, 'fs5', 16)" class="i">connection</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs6', 17)" onmouseover="showTip(event, 'fs6', 17)" class="t">Debugger</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs7', 18)" onmouseover="showTip(event, 'fs7', 18)" class="f">connect</span> (<span class="i">Remote</span>(<span class="s">&quot;localhost&quot;</span>,<span class="n">8080</span>)) <span class="c">// obtain the connection, for example if sending some information directly</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">connection</span> <span class="o">=</span> <span class="id">Debugger</span><span class="pn">.</span><span class="id">connect</span> <span class="pn">(</span><span class="id">Remote</span><span class="pn">(</span><span class="s">&quot;localhost&quot;</span><span class="pn">,</span><span class="n">8080</span><span class="pn">)</span><span class="pn">)</span> <span class="c">// obtain the connection, for example if sending some information directly</span>
 
-<span onmouseout="hideTip(event, 'fs3', 19)" onmouseover="showTip(event, 'fs3', 19)" class="i">Program</span><span class="o">.</span><span class="i">mkProgram</span> <span class="i">init</span> <span class="i">update</span> <span class="i">view</span>
-<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs3', 20)" onmouseover="showTip(event, 'fs3', 20)" class="t">Program</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs4', 21)" onmouseover="showTip(event, 'fs4', 21)" class="f">withDebuggerUsing</span> <span onmouseout="hideTip(event, 'fs5', 22)" onmouseover="showTip(event, 'fs5', 22)" class="i">connection</span>
-<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs3', 23)" onmouseover="showTip(event, 'fs3', 23)" class="i">Program</span><span class="o">.</span><span class="i">run</span>
+<span class="id">Program</span><span class="pn">.</span><span class="id">mkProgram</span> <span class="id">init</span> <span class="id">update</span> <span class="id">view</span>
+<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">withDebuggerUsing</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">connection</span>
+<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">run</span>
 </code></pre></td>
 </tr>
 </table>
 <h3><a name="Conditional-compilation" class="anchor" href="#Conditional-compilation">Conditional compilation</a></h3>
 <p>If don't want to include the debugger in production builds surround it with <code>#if DEBUG</code>/<code>#endif</code> and define the symbol conditionally in your build system.</p>
 
-<div class="tip" id="fs1">namespace Elmish</div>
-<div class="tip" id="fs2">namespace Elmish.Debug</div>
-<div class="tip" id="fs3">module Program<br /><br />from Elmish.Debug</div>
-<div class="tip" id="fs4"></div>
-<div class="tip" id="fs5">val connection : Fable.Import.RemoteDev.Connection<br /><br />Full name: Index.connection</div>
-<div class="tip" id="fs6">module Debugger<br /><br />from Elmish.Debug</div>
-<div class="tip" id="fs7">val connect : (Debugger.ConnectionOptions -&gt; Fable.Import.RemoteDev.Connection)<br /><br />Full name: Elmish.Debug.Debugger.connect</div>
+<div class="tip" id="fs1">val connection : obj</div>
 
         </div>
         <div class="span3">
