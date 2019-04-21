@@ -1,3 +1,7 @@
+### 3.0.0
+
+* Elmish 3.0 release
+
 ### 3.0.0-beta-3
 
 * Elmish 3.0 opaque `Program` support

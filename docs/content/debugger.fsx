@@ -3,6 +3,7 @@
 #I "../../.paket/load/netstandard2.0"
 #r "Fable.Core.dll"
 #r "Fable.Elmish.dll"
+#r "Fable.Elmish.Debugger.dll"
 
 (**
 *)
@@ -11,6 +12,7 @@ namespace Elmish.Debug
 open Fable.Import
 open Fable.Import.RemoteDev
 open Fable.Core.JsInterop
+open Fable.Core
 open Thoth.Json
 
 [<RequireQualifiedAccess>]
@@ -21,26 +23,12 @@ module Debugger =
         | Remote of address:string * port:int
         | Secure of address:string * port:int
 
-    let connect getCase opt =
-        let serialize = createObj [
-            // TODO: This should be exposed by Thoth.Json
-            "replacer" ==> fun (_key: string) (value: obj) ->
-                match value with
-                // Match string before so it's not considered an IEnumerable
-                | :? string -> value
-                | :? System.Collections.IEnumerable ->
-                    if JS.Array.isArray(value)
-                    then value
-                    else JS.Array.from(value :?> JS.Iterable<obj>) |> box
-                | _ -> value
-        ]
-
+    let connect<'msg, 'model> (getCase: 'msg->obj) opt =
         let fallback = { Options.remote = true
                          hostname = "remotedev.io"
                          port = 443
                          secure = true
-                         getActionType = Some getCase
-                         serialize = serialize }
+                         getActionType = Some getCase }
 
         match opt with
         | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
@@ -49,48 +37,36 @@ module Debugger =
         |> connectViaExtension
 
     type Send<'msg,'model> = 'msg*'model -> unit
-    type Debounce<'msg,'model> = Send<'msg,'model> -> 'msg -> 'model -> unit
-
-    let inline nobounce send msg model = send(msg,model)
-
-    let debounce timeoutMs =
-        let mutable timeoutActive = false
-        let mutable store = Unchecked.defaultof<'msg * 'model>
-        fun send msg model ->
-            store <- msg, model
-            if not timeoutActive then
-                timeoutActive <- true
-                JS.setTimeout (fun () ->
-                    send store
-                    timeoutActive <- false) timeoutMs |> ignore
-
 
 [<RequireQualifiedAccess>]
 module Program =
     open Elmish
     open FSharp.Reflection
 
-    let inline private duName (x:'a) =
-        match FSharpValue.GetUnionFields(x, typeof<'a>) with
-        | case, _ -> case.Name
+    let inline private getHelpers<'msg,'model>() =
+        let makeObj (case, fields) =
+            createObj ["type" ==> case
+                       "msg" ==> fields]
+        let getCase =
+            let t = typeof<'msg>
+            if Reflection.FSharpType.IsUnion t then
+                fun x -> FSharpValue.GetUnionFields(x, t) |> fun (c, fs) -> makeObj(c.Name, fs)
+            else
+                fun x -> makeObj("NOT-AN-F#-UNION", x)
+        getCase, Encode.Auto.generateEncoder<'model>(), Decode.Auto.generateDecoder<'model>()
 
-    let inline private getCase<'msg> (cmd: 'msg) : obj =
-        createObj ["type" ==> duName cmd
-                   "msg" ==> cmd]
-
-    let withDebuggerUsing (debounce:Debugger.Debounce<'msg,'model>) (decoder: Decode.Decoder<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
-        let init a =
-            let (model,cmd) = program.init a
-            let deflated = Encode.Auto.toString(0, model) |> JS.JSON.parse
-            connection.init (deflated, None)
+    let withDebuggerUsing (encoder: Encoder<'model>) (decoder: Decoder<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+        let init userInit a =
+            let (model,cmd) = userInit a
+            connection.init (encoder model, None)
             model,cmd
 
-        let update msg model : 'model * Cmd<'msg> =
-            let (model',cmd) = program.update msg model
-            debounce connection.send msg model'
+        let update userUpdate msg model : 'model * Cmd<'msg> =
+            let (model',cmd) = userUpdate msg model
+            connection.send(msg, encoder model')
             (model',cmd)
 
-        let subscribe model =
+        let subscribe userSubscribe model =
             let sub dispatch =
                 function
                 | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
@@ -99,65 +75,51 @@ module Program =
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
                             match extractState msg |> Decode.fromValue "$" decoder with
-                            | Ok state -> program.setState state dispatch
-                            | Error er -> Browser.console.error(er)
+                            | Ok state -> (state,dispatch) ||> Program.setState program
+                            | Error er -> JS.console.error("[DEBUGGER]", er)
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
                             match Decode.fromValue "$" decoder state?state with
-                            | Ok state -> program.setState state dispatch
-                            | Error er -> Browser.console.error(er)
+                            | Ok state -> (state,dispatch) ||> Program.setState program
+                            | Error er -> JS.console.error("[DEBUGGER]", er)
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
-                        Fable.Import.Browser.console.error ("Unable to process monitor command", msg, ex)
+                        JS.console.error ("[DEBUGGER] Unable to process monitor command", msg, ex)
                 | _ -> ()
                 |> connection.subscribe
                 |> ignore
 
             Cmd.batch
                 [ [sub]
-                  program.subscribe model ]
+                  userSubscribe model ]
 
-        let onError (text,ex: exn) =
-            program.onError (text, ex)
+        let onError userOnError (text,ex: exn) =
+            userOnError (text, ex)
             connection.error (text + ex.Message)
 
-        { program with
-                    init = init
-                    update = update
-                    subscribe = subscribe
-                    onError = onError }
+        program
+        |> Program.map init update id id subscribe
+        |> Program.mapErrorHandler onError
 
     let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =
-        let decoder = Decode.Auto.generateDecoder()
-        withDebuggerUsing Debugger.nobounce decoder connection program
+        let _, encoder, decoder = getHelpers<'msg, 'model>()
+        withDebuggerUsing encoder decoder connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
-            let decoder = Decode.Auto.generateDecoder()
-            let connection = Debugger.connect getCase<'msg> options
-            withDebuggerUsing Debugger.nobounce decoder connection program
+            let getCase, encoder, decoder = getHelpers<'msg, 'model>()
+            let connection = Debugger.connect getCase options
+            withDebuggerUsing encoder decoder connection program
         with ex ->
-            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            let decoder = Decode.Auto.generateDecoder()
-            let connection = Debugger.connect getCase<'msg> Debugger.ViaExtension
-            withDebuggerUsing Debugger.nobounce decoder connection program
+            let getCase, encoder, decoder = getHelpers<'msg, 'model>()
+            let connection = Debugger.connect getCase Debugger.ViaExtension
+            withDebuggerUsing encoder decoder connection program
         with ex ->
-            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
-            program
-
-    /// It will send the update to the debugger only once
-    /// within the space of a given time (in milliseconds).
-    /// Intended for apps with many state updates per second, like games.
-    let inline withDebuggerDebounce (debounceTimeout: int) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
-        try
-            let decoder = Decode.Auto.generateDecoder()
-            let connection = Debugger.connect getCase<'msg> Debugger.ViaExtension
-            withDebuggerUsing (Debugger.debounce debounceTimeout) decoder connection program
-        with ex ->
-            Fable.Import.Browser.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program

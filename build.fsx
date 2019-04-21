@@ -1,48 +1,65 @@
-// include Fake libs
-#r "./packages/build/FAKE/tools/FakeLib.dll"
-open Fake.DotNet
-#r "System.IO.Compression.FileSystem"
+#r "paket:
+storage: packages
+nuget Fake.IO.FileSystem
+nuget Fake.DotNet.Cli
+nuget Fake.Core.Target
+nuget Fake.Core.ReleaseNotes
+nuget Fake.Tools.Git
+nuget FSharp.Formatting
+nuget FSharp.Formatting.CommandTool
+nuget Fake.DotNet.FSFormatting //"
+#if !FAKE
+#load ".fake/build.fsx/intellisense.fsx"
+#r "Facades/netstandard"
+#endif
 
 open System
 open System.IO
 open Fake.Core
+open Fake.Core.TargetOperators
+open Fake.DotNet
+open Fake.Tools
 open Fake.IO
 open Fake.IO.FileSystemOperators
-open Fake.Tools.Git
 open Fake.IO.Globbing.Operators
-open Fake.Core.TargetOperators
+
+
+let gitName = "debugger"
+let gitOwner = "elmish"
+let gitHome = sprintf "https://github.com/%s" gitOwner
+let gitRepo = sprintf "git@github.com:%s/%s.git" gitOwner gitName
 
 // Filesets
 let projects  =
       !! "src/**.fsproj"
 
 
-Target.create "InstallDotNetCore" (fun _ ->
-   DotNet.Options.Create() |> DotNet.install (fun o -> { o with Version = DotNet.CliVersion.GlobalJson}) |> ignore
-)
-
-
-Target.create "Install" (fun _ ->
-    projects
-    |> Seq.iter (fun s ->
-        let dir = IO.Path.GetDirectoryName s
-        DotNet.restore id dir
-    )
-)
+let withWorkDir = DotNet.Options.withWorkingDirectory
 
 Target.create "Clean" (fun _ ->
+    Shell.cleanDir "src/obj"
+    Shell.cleanDir "src/bin"
+)
+
+Target.create "Restore" (fun _ ->
     projects
     |> Seq.iter (fun s ->
-        let dir = IO.Path.GetDirectoryName s
-        dir </> "bin" |> Shell.cleanDir
-        dir </> "obj" |> Shell.cleanDir)
+        let dir = Path.GetDirectoryName s
+        DotNet.restore (fun a -> a.WithCommon (withWorkDir dir)) s
+    )
 )
 
 Target.create "Build" (fun _ ->
     projects
     |> Seq.iter (fun s ->
-        let dir = IO.Path.GetDirectoryName s
-        DotNet.build id dir)
+        let dir = Path.GetDirectoryName s
+        DotNet.build (fun a ->
+            a.WithCommon
+                (fun c ->
+                    let c = c |> withWorkDir dir
+                    {c with CustomParams = Some "/p:SourceLinkCreate=true"}))
+            s
+    )
 )
 
 let release = ReleaseNotes.load "RELEASE_NOTES.md"
@@ -68,56 +85,40 @@ Target.create "Meta" (fun _ ->
 // Build a NuGet package
 
 Target.create "Package" (fun _ ->
-    DotNet.pack id "src"
+    projects
+    |> Seq.iter (fun s ->
+        let dir = Path.GetDirectoryName s
+        DotNet.pack (fun a ->
+            a.WithCommon (withWorkDir dir)
+        ) s
+    )
 )
 
 Target.create "PublishNuget" (fun _ ->
+    let exec dir =
+        DotNet.exec (fun a ->
+            a.WithCommon (withWorkDir dir)
+        )
+
     let args = sprintf "push Fable.Elmish.Debugger.%s.nupkg -s nuget.org -k %s" (string release.SemVer) (Environment.environVar "nugetkey")
-    let result = DotNet.exec (fun a -> a |> DotNet.Options.withWorkingDirectory "src/bin/Release") "nuget" args
+    let result = exec "src/bin/Release" "nuget" args
     if (not result.OK) then failwithf "%A" result.Errors
 )
 
 
 // --------------------------------------------------------------------------------------
 // Generate the documentation
-let gitName = "debugger"
-let gitOwner = "elmish"
-let gitHome = sprintf "https://github.com/%s" gitOwner
-
-let fakePath = "packages" </> "build" </> "FAKE" </> "tools" </> "FAKE.exe"
-let fakeStartInfo script workingDirectory args fsiargs environmentVars =
-        (fun (info: ProcStartInfo) ->
-        let env =
-            seq [
-                yield "MSBuild", MSBuild.msBuildExe
-                yield "GIT", CommandHelper.gitPath
-                yield "FSI", Fake.FSIHelper.fsiPath
-            ]
-            |> Seq.append environmentVars
-            |> Map.ofSeq
-        { info with
-            FileName = System.IO.Path.GetFullPath fakePath
-            Arguments = sprintf "%s --fsiargs -d:FAKE %s \"%s\"" args fsiargs script
-            WorkingDirectory = workingDirectory
-            Environment = env }
-    )
-
-/// Run the given buildscript with FAKE.exe
-let executeFAKEWithOutput workingDirectory script fsiargs envArgs =
-    let exitCode =
-         Process.execRaw
-            (fakeStartInfo script workingDirectory "" fsiargs envArgs)
-            TimeSpan.MaxValue false ignore ignore
-    System.Threading.Thread.Sleep 1000
-    exitCode
+let docs_out = "docs/output"
+let docsHome = "https://elmish.github.io/debugger"
 
 let copyFiles() =
     let header =
-        String.splitStr "\n" """(*** hide ***)
+        Fake.Core.String.splitStr "\n" """(*** hide ***)
 #I "../../src/bin/Release/netstandard2.0"
 #I "../../.paket/load/netstandard2.0"
 #r "Fable.Core.dll"
 #r "Fable.Elmish.dll"
+#r "Fable.Elmish.Debugger.dll"
 
 (**
 *)"""
@@ -128,35 +129,31 @@ let copyFiles() =
         let fsx = Path.Combine("docs/content",Path.ChangeExtension(fn |> Path.GetFileName, "fsx"))
         lines |> File.writeNew fsx)
 
-// Documentation
-let buildDocumentationTarget fsiargs target =
-    Trace.trace (sprintf "Building documentation (%s), this could take some time, please wait..." target)
-    let exit = executeFAKEWithOutput "docs/tools" "generate.fsx" fsiargs ["target", target]
-    if exit <> 0 then
-        failwith "generating reference documentation failed"
-    ()
-
-let generateHelp fail debug =
+let generateDocs _ =
     copyFiles()
-    Shell.cleanDir "docs/tools/.fake"
-    let args =
-        if debug then "--define:HELP"
-        else "--define:RELEASE --define:HELP"
-    try
-        buildDocumentationTarget args "Default"
-        Trace.traceImportant "Help generated"
-    with
-    | e when not fail ->
-        Trace.traceImportant "generating help documentation failed"
+    let info =
+      [ "project-name", "elmish-debugger"
+        "project-author", "Eugene Tolmachev"
+        "project-summary", "Remote DevTools debugger integration for Elmish apps"
+        "project-github", sprintf "%s/%s" gitHome gitName
+        "project-nuget", "http://nuget.org/packages/Fable.Elmish.Debugger" ]
 
-Target.create "GenerateDocs" (fun _ ->
-    generateHelp true false
-)
+    FSFormatting.createDocs (fun args ->
+            { args with
+                Source = "docs/content"
+                OutputDirectory = docs_out
+                LayoutRoots = [ "docs/tools/templates"
+                                ".fake/build.fsx/packages/fsharp.formatting/templates" ]
+                ProjectParameters  = ("root", docsHome)::info
+                Template = "docpage.cshtml" } )
+
+Target.create "GenerateDocs" generateDocs
+
 
 Target.create "WatchDocs" (fun _ ->
-    use watcher = !! "docs/content/**/*.*" |> ChangeWatcher.run (fun changes ->
-         generateHelp true true
-    )
+    use watcher =
+        (!! "docs/content/**/*.*")
+        |> ChangeWatcher.run generateDocs
 
     Trace.traceImportant "Waiting for help edits. Press any key to stop."
 
@@ -171,66 +168,25 @@ Target.create "WatchDocs" (fun _ ->
 Target.create "ReleaseDocs" (fun _ ->
     let tempDocsDir = "temp/gh-pages"
     Shell.cleanDir tempDocsDir
-    Repository.cloneSingleBranch "" (gitHome + "/" + gitName + ".git") "gh-pages" tempDocsDir
+    Git.Repository.cloneSingleBranch "" gitRepo "gh-pages" tempDocsDir
 
-    Shell.copyRecursive "docs/output" tempDocsDir true |> Trace.tracefn "%A"
-    Staging.stageAll tempDocsDir
-    Commit.exec tempDocsDir (sprintf "Update generated documentation for version %s" release.NugetVersion)
-    Branches.push tempDocsDir
-)
-
-#load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
-open Octokit
-
-Target.create "Release" (fun _ ->
-    let user =
-        match Environment.environVarOrDefault "github-user" String.Empty with
-        | s when not (String.isNullOrWhiteSpace s) -> s
-        | _ -> UserInput.getUserInput "Username: "
-    let pw =
-        match Environment.environVarOrDefault "github-pw" String.Empty with
-        | s when not (String.isNullOrWhiteSpace s) -> s
-        | _ -> UserInput.getUserPassword "Password: "
-    let remote =
-        CommandHelper.getGitResult "" "remote -v"
-        |> Seq.filter (fun (s: string) -> s.EndsWith("(push)"))
-        |> Seq.tryFind (fun (s: string) -> s.Contains(gitOwner + "/" + gitName))
-        |> function None -> gitHome + "/" + gitName | Some (s: string) -> s.Split().[0]
-
-    Staging.stageAll ""
-    Commit.exec "" (sprintf "Bump version to %s" release.NugetVersion)
-    Branches.pushBranch "" remote (Information.getBranchName "")
-
-    Branches.tag "" release.NugetVersion
-    Branches.pushTag "" remote release.NugetVersion
-
-    // release on github
-
-    createClient user pw
-    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes
-    |> releaseDraft
-    |> Async.RunSynchronously
+    Shell.copyRecursive docs_out tempDocsDir true |> Trace.tracefn "%A"
+    Git.Staging.stageAll tempDocsDir
+    Git.Commit.exec tempDocsDir (sprintf "Update generated documentation for version %s" release.NugetVersion)
+    Git.Branches.push tempDocsDir
 )
 
 Target.create "Publish" ignore
 
 // Build order
-"Meta"
-  ==> "InstallDotNetCore"
-  ==> "Clean"
-  ==> "Install"
+"Clean"
+  ==> "Meta"
+  ==> "Restore"
   ==> "Build"
   ==> "Package"
-
-"Build"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
-
-"Publish"
-  <== [ "Build"
-        "Package"
-        "PublishNuget"
-        "ReleaseDocs" ]
+  ==> "Publish"
 
 
 // start build

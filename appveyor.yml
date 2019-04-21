@@ -1,15 +1,14 @@
-version: 0.0.{build}
-image: Visual Studio 2017
-init:
-  - git config --global core.autocrlf input
+build:
+  verbosity: detailed
+
+image: Visual Studio 2019
+
+install:
+  - ps: Install-Product node 8 x64
+  - ps: dotnet tool install fake-cli
 
 build_script:
-  - cmd: build.cmd
+  - cmd: fake build -t Build
 
-test: off
-
-artifacts:
-  - path: build
-    name: elmish
-  
- 
+cache:
+- "%LOCALAPPDATA%\\Yarn"

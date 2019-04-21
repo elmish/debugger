@@ -3,6 +3,7 @@
 #I "../../.paket/load/netstandard2.0"
 #r "Fable.Core.dll"
 #r "Fable.Elmish.dll"
+#r "Fable.Elmish.Debugger.dll"
 
 (**
 *)
@@ -10,8 +11,6 @@ namespace Fable.Import
 
 open System
 open Fable.Core
-open Fable.Import.JS
-open Fable.Import.Browser
 
 module RemoteDev =
     module MsgTypes =
@@ -35,8 +34,7 @@ module RemoteDev =
           port : int
           hostname : string
           secure : bool
-          getActionType : ('msg->obj) option
-          serialize: obj }
+          getActionType : ('msg->obj) option }
 
     type Action =
         { ``type``: string
