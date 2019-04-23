@@ -14,10 +14,6 @@ module Debugger =
         | Remote of address:string * port:int
         | Secure of address:string * port:int
 
-    type ITransformer<'model> =
-        abstract Deflate: 'model -> obj
-        abstract Inflate: obj -> 'model
-
     let connect<'msg, 'model> (getCase: 'msg->obj) opt =
         let fallback = { Options.remote = true
                          hostname = "remotedev.io"
@@ -68,42 +64,40 @@ module Program =
             else
                 fun x -> makeMsgObj("NOT-AN-F#-UNION", x)
 
-        let transformer =
+        let deflater, inflater =
             try
                 let encoder = Encode.Auto.generateEncoder<'model>()
                 let decoder = Decode.Auto.generateDecoder<'model>()
-                { new Debugger.ITransformer<_> with
-                    member __.Deflate(x) =
-                        try encoder x
-                        with er ->
-                            showEncodeError er
-                            fallbackDeflater x
-                    member __.Inflate(x) =
-                        match Decode.fromValue "$" decoder x with
-                        | Ok x -> x
-                        | Error er -> failwith er }
+                let deflate x =
+                    try encoder x
+                    with er ->
+                        showEncodeError er
+                        fallbackDeflater x
+                let inflate x =
+                    match Decode.fromValue "$" decoder x with
+                    | Ok x -> x
+                    | Error er -> failwith er
+                deflate, inflate
             with er ->
                 showEncodeError er
-                { new Debugger.ITransformer<_> with
-                    member __.Deflate(value) = fallbackDeflater value
-                    member __.Inflate(x) = failwith "Cannot inflate state value" }
-        getCase, transformer
+                fallbackDeflater, fun _ -> failwith "Cannot inflate model"
+        getCase, deflater, inflater
 
-    let withDebuggerUsing (transformer: Debugger.ITransformer<'model>) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init userInit a =
             let (model,cmd) = userInit a
-            connection.init (transformer.Deflate model, None)
+            connection.init (deflater model, None)
             model,cmd
 
         let update userUpdate msg model : 'model * Cmd<'msg> =
             let (model',cmd) = userUpdate msg model
-            connection.send(msg, transformer.Deflate model')
+            connection.send(msg, deflater model')
             (model',cmd)
 
         let subscribe userSubscribe model =
             let trySetState dispatch deflatedState =
                 try
-                    let state = transformer.Inflate deflatedState
+                    let state = inflater deflatedState
                     (state, dispatch) ||> Program.setState program
                 with er ->
                     JS.console.error("[ELMISH DEBUGGER]", er.Message)
@@ -140,23 +134,23 @@ module Program =
         |> Program.mapErrorHandler onError
 
     let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =
-        let _, transformer = getHelpers<'msg, 'model>()
-        withDebuggerUsing transformer connection program
+        let _, deflater, inflater = getHelpers<'msg, 'model>()
+        withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
-            let getCase, transformer = getHelpers<'msg, 'model>()
+            let getCase, deflater, inflater = getHelpers<'msg, 'model>()
             let connection = Debugger.connect getCase options
-            withDebuggerUsing transformer connection program
+            withDebuggerUsing deflater inflater connection program
         with ex ->
             JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            let getCase, transformer = getHelpers<'msg, 'model>()
+            let getCase, deflater, inflater = getHelpers<'msg, 'model>()
             let connection = Debugger.connect getCase Debugger.ViaExtension
-            withDebuggerUsing transformer connection program
+            withDebuggerUsing deflater inflater connection program
         with ex ->
             JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
             program
