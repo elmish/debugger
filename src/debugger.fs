@@ -38,42 +38,54 @@ module Program =
     open Elmish
     open FSharp.Reflection
 
-    let private fallbackDeflater (value: obj): obj =
-        JS.JSON.stringify(value, (fun _ value ->
-            match value with
-            // Match string before so it's not considered an IEnumerable
-            | :? string -> value
-            | :? System.Collections.IEnumerable ->
-                if JS.Array.isArray(value) then value
-                else value :?> seq<obj> |> Seq.toArray |> box
-            | _ -> value
-        )) |> JS.JSON.parse
-
     let inline private getHelpers<'msg,'model>() =
-        let makeObj (case, fields) =
-            createObj ["type" ==> case
-                       "msg" ==> fields]
+        let showEncodeError =
+            let mutable hasShownError = false
+            fun (er: System.Exception) ->
+                if not hasShownError then
+                    hasShownError <- true
+                    JS.console.warn("[ELMISH DEBUGGER]", er.Message)
+                    JS.console.warn("[ELMISH DEBUGGER] Falling back to simple deflater")
+
+        let fallbackDeflater (value: obj): obj =
+            JS.JSON.stringify(value, (fun _ value ->
+                match value with
+                // Match string before so it's not considered an IEnumerable
+                | :? string -> value
+                | :? System.Collections.IEnumerable ->
+                    if JS.Array.isArray(value) then value
+                    else value :?> seq<obj> |> Seq.toArray |> box
+                | _ -> value
+            )) |> JS.JSON.parse
+
+        let makeMsgObj (case, fields) =
+            createObj ["type" ==> case; "msg" ==> fields]
+
         let getCase =
             let t = typeof<'msg>
             if Reflection.FSharpType.IsUnion t then
-                fun x -> FSharpValue.GetUnionFields(x, t) |> fun (c, fs) -> makeObj(c.Name, fs)
+                fun x -> FSharpValue.GetUnionFields(x, t) |> fun (c, fs) -> makeMsgObj(c.Name, fs)
             else
-                fun x -> makeObj("NOT-AN-F#-UNION", x)
+                fun x -> makeMsgObj("NOT-AN-F#-UNION", x)
+
         let transformer =
             try
                 let encoder = Encode.Auto.generateEncoder<'model>()
                 let decoder = Decode.Auto.generateDecoder<'model>()
                 { new Debugger.ITransformer<_> with
-                    member __.Deflate(x) = encoder x
+                    member __.Deflate(x) =
+                        try encoder x
+                        with er ->
+                            showEncodeError er
+                            fallbackDeflater x
                     member __.Inflate(x) =
                         match Decode.fromValue "$" decoder x with
                         | Ok x -> x
                         | Error er -> failwith er }
-            with ex ->
-                JS.console.warn("[ELMISH DEBUGGER]", ex.Message)
-                JS.console.warn("[ELMISH DEBUGGER] Falling back to simple deflater")
+            with er ->
+                showEncodeError er
                 { new Debugger.ITransformer<_> with
-                    member __.Deflate(x) = fallbackDeflater x
+                    member __.Deflate(value) = fallbackDeflater value
                     member __.Inflate(x) = failwith "Cannot inflate state value" }
         getCase, transformer
 
