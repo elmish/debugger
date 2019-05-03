@@ -43,17 +43,6 @@ module Program =
                     JS.console.warn("[ELMISH DEBUGGER]", er.Message)
                     JS.console.warn("[ELMISH DEBUGGER] Falling back to simple deflater")
 
-        let fallbackDeflater (value: obj): obj =
-            JS.JSON.stringify(value, (fun _ value ->
-                match value with
-                // Match string before so it's not considered an IEnumerable
-                | :? string -> value
-                | :? System.Collections.IEnumerable ->
-                    if JS.Array.isArray(value) then value
-                    else value :?> seq<obj> |> Seq.toArray |> box
-                | _ -> value
-            )) |> JS.JSON.parse
-
         let makeMsgObj (case, fields) =
             createObj ["type" ==> case; "msg" ==> fields]
 
@@ -72,7 +61,7 @@ module Program =
                     try encoder x
                     with er ->
                         showEncodeError er
-                        fallbackDeflater x
+                        box x
                 let inflate x =
                     match Decode.fromValue "$" decoder x with
                     | Ok x -> x
@@ -80,7 +69,7 @@ module Program =
                 deflate, inflate
             with er ->
                 showEncodeError er
-                fallbackDeflater, fun _ -> failwith "Cannot inflate model"
+                box, fun _ -> failwith "Cannot inflate model"
         getCase, deflater, inflater
 
     let withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
@@ -95,13 +84,6 @@ module Program =
             (model',cmd)
 
         let subscribe userSubscribe model =
-            let trySetState dispatch deflatedState =
-                try
-                    let state = inflater deflatedState
-                    (state, dispatch) ||> Program.setState program
-                with er ->
-                    JS.console.error("[ELMISH DEBUGGER]", er.Message)
-
             let sub dispatch =
                 function
                 | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
@@ -109,10 +91,12 @@ module Program =
                         match msg.payload.``type`` with
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
-                            extractState msg |> trySetState dispatch
+                            let state = extractState msg |> inflater
+                            Program.setState program state dispatch
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            trySetState dispatch state?state
+                            let state = inflater state?state
+                            Program.setState program state dispatch
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
