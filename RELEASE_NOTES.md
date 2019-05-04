@@ -1,3 +1,7 @@
+### 3.0.1
+
+* Fix #28: Converting circular structure to JSON
+
 ### 3.0.0
 
 * Elmish 3.0 release
