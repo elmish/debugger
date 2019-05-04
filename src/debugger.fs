@@ -8,13 +8,24 @@ open Thoth.Json
 
 [<RequireQualifiedAccess>]
 module Debugger =
+    open FSharp.Reflection
 
     type ConnectionOptions =
         | ViaExtension
         | Remote of address:string * port:int
         | Secure of address:string * port:int
 
-    let connect<'msg, 'model> (getCase: 'msg->obj) opt =
+    let inline connect<'msg> opt =
+        let makeMsgObj (case, fields) =
+            createObj ["type" ==> case; "msg" ==> fields]
+
+        let getCase =
+            let t = typeof<'msg>
+            if Reflection.FSharpType.IsUnion t then
+                fun x -> FSharpValue.GetUnionFields(x, t) |> fun (c, fs) -> makeMsgObj(c.Name, fs)
+            else
+                fun x -> makeMsgObj("NOT-AN-F#-UNION", x)
+
         let fallback = { Options.remote = true
                          hostname = "remotedev.io"
                          port = 443
@@ -32,56 +43,30 @@ module Debugger =
 [<RequireQualifiedAccess>]
 module Program =
     open Elmish
-    open FSharp.Reflection
 
-    let inline private getHelpers<'msg,'model>() =
+    let inline private getTransformers<'model>() =
         let showEncodeError =
             let mutable hasShownError = false
             fun (er: System.Exception) ->
                 if not hasShownError then
                     hasShownError <- true
                     JS.console.warn("[ELMISH DEBUGGER]", er.Message)
-                    JS.console.warn("[ELMISH DEBUGGER] Falling back to simple deflater")
-
-        let fallbackDeflater (value: obj): obj =
-            JS.JSON.stringify(value, (fun _ value ->
-                match value with
-                // Match string before so it's not considered an IEnumerable
-                | :? string -> value
-                | :? System.Collections.IEnumerable ->
-                    if JS.Array.isArray(value) then value
-                    else value :?> seq<obj> |> Seq.toArray |> box
-                | _ -> value
-            )) |> JS.JSON.parse
-
-        let makeMsgObj (case, fields) =
-            createObj ["type" ==> case; "msg" ==> fields]
-
-        let getCase =
-            let t = typeof<'msg>
-            if Reflection.FSharpType.IsUnion t then
-                fun x -> FSharpValue.GetUnionFields(x, t) |> fun (c, fs) -> makeMsgObj(c.Name, fs)
-            else
-                fun x -> makeMsgObj("NOT-AN-F#-UNION", x)
-
-        let deflater, inflater =
-            try
-                let encoder = Encode.Auto.generateEncoder<'model>()
-                let decoder = Decode.Auto.generateDecoder<'model>()
-                let deflate x =
-                    try encoder x
-                    with er ->
-                        showEncodeError er
-                        fallbackDeflater x
-                let inflate x =
-                    match Decode.fromValue "$" decoder x with
-                    | Ok x -> x
-                    | Error er -> failwith er
-                deflate, inflate
-            with er ->
-                showEncodeError er
-                fallbackDeflater, fun _ -> failwith "Cannot inflate model"
-        getCase, deflater, inflater
+        try
+            let encoder = Encode.Auto.generateEncoder<'model>()
+            let decoder = Decode.Auto.generateDecoder<'model>()
+            let deflate x =
+                try encoder x
+                with er ->
+                    showEncodeError er
+                    box x
+            let inflate x =
+                match Decode.fromValue "$" decoder x with
+                | Ok x -> x
+                | Error er -> failwith er
+            deflate, inflate
+        with er ->
+            showEncodeError er
+            box, fun _ -> failwith "Cannot inflate model"
 
     let withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         let init userInit a =
@@ -95,13 +80,6 @@ module Program =
             (model',cmd)
 
         let subscribe userSubscribe model =
-            let trySetState dispatch deflatedState =
-                try
-                    let state = inflater deflatedState
-                    (state, dispatch) ||> Program.setState program
-                with er ->
-                    JS.console.error("[ELMISH DEBUGGER]", er.Message)
-
             let sub dispatch =
                 function
                 | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
@@ -109,10 +87,12 @@ module Program =
                         match msg.payload.``type`` with
                         | PayloadTypes.JumpToAction
                         | PayloadTypes.JumpToState ->
-                            extractState msg |> trySetState dispatch
+                            let state = extractState msg |> inflater
+                            Program.setState program state dispatch
                         | PayloadTypes.ImportState ->
                             let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            trySetState dispatch state?state
+                            let state = inflater state?state
+                            Program.setState program state dispatch
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
@@ -134,13 +114,13 @@ module Program =
         |> Program.mapErrorHandler onError
 
     let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =
-        let _, deflater, inflater = getHelpers<'msg, 'model>()
+        let deflater, inflater = getTransformers<'model>()
         withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
-            let getCase, deflater, inflater = getHelpers<'msg, 'model>()
-            let connection = Debugger.connect getCase options
+            let deflater, inflater = getTransformers<'model>()
+            let connection = Debugger.connect<'msg> options
             withDebuggerUsing deflater inflater connection program
         with ex ->
             JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
@@ -148,8 +128,8 @@ module Program =
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
-            let getCase, deflater, inflater = getHelpers<'msg, 'model>()
-            let connection = Debugger.connect getCase Debugger.ViaExtension
+            let deflater, inflater = getTransformers<'model>()
+            let connection = Debugger.connect<'msg> Debugger.ViaExtension
             withDebuggerUsing deflater inflater connection program
         with ex ->
             JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
