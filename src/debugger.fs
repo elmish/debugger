@@ -65,7 +65,7 @@ module Program =
                 Extra.empty
                 |> Extra.withDecimal
                 |> Extra.withInt64
-                |> Extra.withInt64
+                |> Extra.withUInt64
                 // |> Extra.withBigInt
             let encoder = Encode.Auto.generateEncoder<'model>(extra = coders)
             let decoder = Decode.Auto.generateDecoder<'model>(extra = coders)
