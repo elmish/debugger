@@ -10,6 +10,9 @@ open Thoth.Json
 module Debugger =
     open FSharp.Reflection
 
+    let showError (msgs: obj list) = JS.console.error("[ELMISH DEBUGGER]", List.toArray msgs)
+    let showWarning (msgs: obj list) = JS.console.warn("[ELMISH DEBUGGER]", List.toArray msgs)
+
     type ConnectionOptions =
         | ViaExtension
         | Remote of address:string * port:int
@@ -44,28 +47,31 @@ module Debugger =
 module Program =
     open Elmish
 
+    let inline private getTransformersWith encoder decoder =
+        let deflate x =
+            try encoder x
+            with er ->
+                Debugger.showWarning [er.Message]
+                box x
+        let inflate x =
+            match Decode.fromValue "$" decoder x with
+            | Ok x -> x
+            | Error er -> failwith er
+        deflate, inflate
+
     let inline private getTransformers<'model>() =
-        let showEncodeError =
-            let mutable hasShownError = false
-            fun (er: System.Exception) ->
-                if not hasShownError then
-                    hasShownError <- true
-                    JS.console.warn("[ELMISH DEBUGGER]", er.Message)
         try
-            let encoder = Encode.Auto.generateEncoder<'model>()
-            let decoder = Decode.Auto.generateDecoder<'model>()
-            let deflate x =
-                try encoder x
-                with er ->
-                    showEncodeError er
-                    box x
-            let inflate x =
-                match Decode.fromValue "$" decoder x with
-                | Ok x -> x
-                | Error er -> failwith er
-            deflate, inflate
+            let coders =
+                Extra.empty
+                |> Extra.withDecimal
+                |> Extra.withInt64
+                |> Extra.withUInt64
+                // |> Extra.withBigInt
+            let encoder = Encode.Auto.generateEncoder<'model>(extra = coders)
+            let decoder = Decode.Auto.generateDecoder<'model>(extra = coders)
+            getTransformersWith encoder decoder
         with er ->
-            showEncodeError er
+            Debugger.showWarning [er.Message]
             box, fun _ -> failwith "Cannot inflate model"
 
     let withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
@@ -96,7 +102,7 @@ module Program =
                             connection.send(null, msg.payload.nextLiftedState)
                         | _ -> ()
                     with ex ->
-                        JS.console.error ("[ELMISH DEBUGGER] Unable to process monitor command", msg, ex)
+                        Debugger.showError ["Unable to process monitor command"; ex.Message; msg]
                 | _ -> ()
                 |> connection.subscribe
                 |> ignore
@@ -117,13 +123,18 @@ module Program =
         let deflater, inflater = getTransformers<'model>()
         withDebuggerUsing deflater inflater connection program
 
+    let inline withDebuggerCoders (encoder: Encoder<'model>) (decoder: Decoder<'model>) program : Program<'a,'model,'msg,'view> =
+        let deflater, inflater = getTransformersWith encoder decoder
+        let connection = Debugger.connect<'msg> Debugger.ViaExtension
+        withDebuggerUsing deflater inflater connection program
+
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
         try
             let deflater, inflater = getTransformers<'model>()
             let connection = Debugger.connect<'msg> options
             withDebuggerUsing deflater inflater connection program
         with ex ->
-            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
             program
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
@@ -132,5 +143,5 @@ module Program =
             let connection = Debugger.connect<'msg> Debugger.ViaExtension
             withDebuggerUsing deflater inflater connection program
         with ex ->
-            JS.console.error ("Unable to connect to the monitor, continuing w/o debugger", ex)
+            Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
             program

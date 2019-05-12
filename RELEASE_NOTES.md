@@ -1,3 +1,11 @@
+### 3.0.2
+
+* Fix #30: Add Thoth extra coders
+
+### 3.0.1
+
+* Fix #28: Converting circular structure to JSON
+
 ### 3.0.0
 
 * Elmish 3.0 release
