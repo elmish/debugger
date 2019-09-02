@@ -22,12 +22,20 @@ module Debugger =
         let makeMsgObj (case, fields) =
             createObj ["type" ==> case; "msg" ==> fields]
 
-        let getCase =
-            let t = typeof<'msg>
-            if Reflection.FSharpType.IsUnion t then
-                fun x -> FSharpValue.GetUnionFields(x, t) |> fun (c, fs) -> makeMsgObj(c.Name, fs)
+        let getCase (x: obj) =
+            if Reflection.isUnion x then
+                let rec getCaseName acc (x: obj) =
+                    let acc = (Reflection.getCaseName x)::acc
+                    let fields = Reflection.getCaseFields x
+                    if fields.Length = 1 && Reflection.isUnion fields.[0] then
+                        getCaseName acc fields.[0]
+                    else
+                        // Case names are intentionally left reverted so we see
+                        // the most meaningfull message first
+                        makeMsgObj(acc |> String.concat "/", fields)
+                getCaseName [] x
             else
-                fun x -> makeMsgObj("NOT-AN-F#-UNION", x)
+                makeMsgObj("NOT-AN-F#-UNION", x)
 
         let fallback = { Options.remote = true
                          hostname = "remotedev.io"
@@ -37,8 +45,8 @@ module Debugger =
 
         match opt with
         | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
-        | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false; getActionType = None }
-        | Secure (address,port) -> { fallback with hostname = address; port = port; getActionType = None }
+        | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false }
+        | Secure (address,port) -> { fallback with hostname = address; port = port }
         |> connectViaExtension
 
     type Send<'msg,'model> = 'msg*'model -> unit
