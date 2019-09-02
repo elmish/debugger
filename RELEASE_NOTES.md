@@ -1,3 +1,8 @@
+### 3.0.3
+
+* Fix #33: getActionType via remotedev
+* Better display of nested messages
+
 ### 3.0.2
 
 * Fix #30: Add Thoth extra coders
