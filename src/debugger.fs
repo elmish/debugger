@@ -45,8 +45,8 @@ module Debugger =
 
         match opt with
         | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
-        | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false }
-        | Secure (address,port) -> { fallback with hostname = address; port = port }
+        | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false; getActionType = None }
+        | Secure (address,port) -> { fallback with hostname = address; port = port; getActionType = None }
         |> connectViaExtension
 
     type Send<'msg,'model> = 'msg*'model -> unit
