@@ -123,8 +123,11 @@ module Program =
             userOnError (text, ex)
             connection.error (text + ex.Message)
 
+        let termination (predicate,terminate) =
+            predicate, terminate
+
         program
-        |> Program.map init update id id subscribe
+        |> Program.map init update id id subscribe termination
         |> Program.mapErrorHandler onError
 
     let inline withDebuggerConnection connection program : Program<'a,'model,'msg,'view> =

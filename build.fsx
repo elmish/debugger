@@ -185,8 +185,8 @@ Target.create "Publish" ignore
   ==> "Build"
   ==> "Package"
   ==> "GenerateDocs"
-  ==> "ReleaseDocs"
   ==> "PublishNuget"
+  ==> "ReleaseDocs"
   ==> "Publish"
 
 

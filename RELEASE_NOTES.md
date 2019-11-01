@@ -1,3 +1,7 @@
+### 4.0.0-alpha-1
+
+* Elmish 3.0 release
+
 ### 3.0.3
 
 * Fix #33: getActionType via remotedev
