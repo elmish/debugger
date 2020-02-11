@@ -1,11 +1,11 @@
-﻿(*** hide ***)
-#I "../../src/bin/Release/netstandard2.0"
-#I "../../.paket/load/netstandard2.0"
-#r "Fable.Core.dll"
-#r "Fable.Elmish.dll"
-#r "Fable.Elmish.Debugger.dll"
-
-(**
+﻿(*** hide ***)
+#I "../../src/bin/Release/netstandard2.0"
+#I "../../.paket/load/netstandard2.0"
+#r "Fable.Core.dll"
+#r "Fable.Elmish.dll"
+#r "Fable.Elmish.Debugger.dll"
+
+(**
 *)
 namespace Fable.Import
 

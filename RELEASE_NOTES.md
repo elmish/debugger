@@ -1,3 +1,7 @@
+### 3.1.0
+
+* Fix #38: Upgrade Thoth.Json to latest version
+
 ### 3.0.3
 
 * Fix #33: getActionType via remotedev
