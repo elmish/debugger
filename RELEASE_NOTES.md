@@ -1,3 +1,7 @@
+### 3.2.0
+
+* Release stable version
+
 ### 3.2.0-beta-1
 
 * Upgrade Thoth.Json to version 4
