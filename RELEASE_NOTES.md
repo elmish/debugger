@@ -1,3 +1,7 @@
+### 3.2.0-beta-1
+
+* Upgrade Thoth.Json to version 4
+
 ### 3.1.0
 
 * Fix #38: Upgrade Thoth.Json to latest version
