@@ -8,6 +8,6 @@ NUGET
       Fable.Core (>= 3.0)
       FSharp.Core (>= 4.6.2)
     FSharp.Core (4.7) - content: none, redirects: force
-    Thoth.Json (3.5)
+    Thoth.Json (4.0)
       Fable.Core (>= 3.1.4)
       FSharp.Core (>= 4.7)

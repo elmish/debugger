@@ -1,9 +1,14 @@
-### 4.0.0-alpha-1
+### 3.2.0-beta-1
 
-* Elmish 3.0 release
+* Upgrade Thoth.Json to version 4
+
 ### 3.1.0
 
 * Fix #38: Upgrade Thoth.Json to latest version
+
+### 4.0.0-alpha-1
+
+* Elmish 3.0 release
 
 ### 3.0.3
 
