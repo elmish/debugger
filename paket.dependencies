@@ -2,7 +2,22 @@ source https://nuget.org/api/v2
 storage: none
 framework: netstandard2.0
 
-nuget FSharp.Core  redirects:force, content:none
+nuget FSharp.Core ~> 4.7.2 redirects:force, content:none
 nuget Fable.Core
 nuget Fable.Elmish
-nuget Thoth.Json ~> 4
+nuget Thoth.Json ~> 6
+
+group netcorebuild
+    source https://www.nuget.org/api/v2
+    framework: netstandard2.0
+    storage: packages
+
+    nuget NETStandard.Library.NETFramework
+    nuget Fake.DotNet.Cli
+    nuget Fake.Core.Target
+    nuget Fake.Core.ReleaseNotes
+    nuget Fake.IO.FileSystem
+    nuget Fake.Tools.Git
+    nuget FSharp.Formatting
+    nuget FSharp.Formatting.CommandTool
+    nuget Fake.DotNet.FSFormatting
