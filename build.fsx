@@ -1,17 +1,11 @@
-#r "paket:
-storage: packages
-nuget Fake.IO.FileSystem
-nuget Fake.DotNet.Cli
-nuget Fake.Core.Target
-nuget Fake.Core.ReleaseNotes
-nuget Fake.Tools.Git
-nuget FSharp.Formatting
-nuget FSharp.Formatting.CommandTool
-nuget Fake.DotNet.FSFormatting //"
-#if !FAKE
+#r "paket: groupref netcorebuild //"
 #load ".fake/build.fsx/intellisense.fsx"
+#if !FAKE
 #r "Facades/netstandard"
+#r "netstandard"
 #endif
+
+#nowarn "52"
 
 open System
 open System.IO
@@ -184,8 +178,8 @@ Target.create "Publish" ignore
   ==> "Restore"
   ==> "Build"
   ==> "Package"
-  ==> "GenerateDocs"
-  ==> "ReleaseDocs"
+//   ==> "GenerateDocs"
+//   ==> "ReleaseDocs"
   ==> "PublishNuget"
   ==> "Publish"
 

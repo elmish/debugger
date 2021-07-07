@@ -1,3 +1,8 @@
+### 3.3.0
+
+* Upgrade Thoth.Json to version 6
+* Keep FSharp.Core requirements lowered to 4.7.2
+
 ### 3.2.0
 
 * Release stable version
