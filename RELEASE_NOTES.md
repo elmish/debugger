@@ -1,3 +1,7 @@
+### 4.0.0-beta-1
+
+* Elmish 4.0 support
+
 ### 3.3.0
 
 * Upgrade Thoth.Json to version 6

@@ -1,4 +1,12 @@
-#r "paket: groupref netcorebuild //"
+#r "paket: 
+storage: packages
+nuget FSharp.Core 4.7
+nuget Fake.IO.FileSystem
+nuget Fake.DotNet.Cli
+nuget Fake.Core.Target
+nuget Fake.Core.ReleaseNotes
+nuget Fake.Tools.Git
+nuget Fake.DotNet.FSFormatting //"
 #load ".fake/build.fsx/intellisense.fsx"
 #if !FAKE
 #r "Facades/netstandard"
