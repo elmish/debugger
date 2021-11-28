@@ -10,4 +10,9 @@
   <ItemGroup>
     <Content Include="*.fsproj; *.fs" PackagePath="fable\" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Elmish" Version="4.0.0-beta-1" />
+    <PackageReference Include="Thoth.Json" Version="6.0.0" />
+  </ItemGroup>
+
 </Project>
