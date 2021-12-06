@@ -1,7 +1,7 @@
 Elmish-Debugger: [Remote DevTools](https://github.com/zalmoxisus/remotedev) integration for [elmish](https://github.com/fable-compiler/elmish) applications.
 =======
 
-[![Build status](https://ci.appveyor.com/api/projects/status/jbf5g40hpaib626t/branch/master?svg=true)](https://ci.appveyor.com/project/et1975/debugger/branch/master) [![NuGet version](https://badge.fury.io/nu/Fable.Elmish.Debugger.svg)](https://badge.fury.io/nu/Fable.Elmish.Debugger)
+[![Build status](https://ci.appveyor.com/api/projects/status/jbf5g40hpaib626t/branch/v4.x?svg=true)](https://ci.appveyor.com/project/et1975/debugger/branch/v4.x) [![NuGet version](https://badge.fury.io/nu/Fable.Elmish.Debugger.svg)](https://badge.fury.io/nu/Fable.Elmish.Debugger)
 
 For more information see [the docs](https://elmish.github.io/debugger).
 
