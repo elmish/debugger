@@ -29,3 +29,6 @@ docs/temp
 Directory.Build.props
 temp
 .ionide
+
+.nacara
+docs_deploy/
