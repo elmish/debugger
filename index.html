@@ -1,121 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <title>Remote DevTools debugger
-</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="description" content="Remote DevTools debugger integration for Elmish apps"/>
-    <meta name="author" content="Eugene Tolmachev"/>
-
-    <script src="https://code.jquery.com/jquery-1.8.0.js"></script>
-    <script src="https://code.jquery.com/ui/1.8.23/jquery-ui.js"></script>
-    <script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
-    <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet"/>
-
-    <link type="text/css" rel="stylesheet" href="https://elmish.github.io/debugger/content/style_light.css" />
-    <script type="text/javascript" src="https://elmish.github.io/debugger/content/tips.js"></script>
-    <style>span.l { display: none }</style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="masthead">
-        <ul class="nav nav-pills pull-right">
-          <li><a href="https://elmish.github.io">elmish</a></li>
-          <li><a href="http://fable.io">fable</a></li>
-          <li><a href="http://fsharp.org">fsharp.org</a></li>
-        </ul>
-        <h3 class="muted"><a href="https://elmish.github.io/debugger/index.html">elmish-debugger</a></h3>
-      </div>
-      <hr />
-      <div class="row">
-        <div class="span9" id="main">
-          
-<h1><a name="Remote-DevTools-debugger" class="anchor" href="#Remote-DevTools-debugger">Remote DevTools debugger</a></h1>
-<p>Elmish applications can benefit from sophisiticated time-travelling debuger with deep state and message inspection capabilities and import/export functionality.
-Wether you target browser, native or any other platform, as long as you can connect to a monitor you can start collecting and visualizing the events.
-For SPAs running in a browser, it's as easy as installing a plugin.</p>
-<p><img src="https://github.com/zalmoxisus/remotedev/raw/master/demo.gif" alt="dbg" /></p>
-<h3><a name="Installation" class="anchor" href="#Installation">Installation</a></h3>
-<p>Add Remote DevTools client package as a devDependency:</p>
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip"><code lang="shell">yarn add remotedev@^0.2.4 -D
-</code></pre></td></tr></table>
-<p>and add Fable package with paket:</p>
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip"><code lang="shell">paket add nuget Fable.Elmish.Debugger
-</code></pre></td></tr></table>
-<p>Follow the monitor installation instructions at <a href="https://github.com/zalmoxisus/remotedev">Remotedev tools</a> site.</p>
-<p>Among all the monitoring apps mentioned there, for local web debugging in Chrome we recommend using <a href="https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd">Redux DevTools Chrome extension</a> as the fastest and the most seamless monitoring option.</p>
-<h3><a name="Program-module-functions" class="anchor" href="#Program-module-functions">Program module functions</a></h3>
-<p>Augment your program instance with a debugger, making sure it's the last item in the line of <code>Program</code> modifications:</p>
-<p>Usage:</p>
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span class="id">Elmish</span><span class="pn">.</span><span class="id">Debug</span>
-
-<span class="id">Program</span><span class="pn">.</span><span class="id">mkProgram</span> <span class="id">init</span> <span class="id">update</span> <span class="id">view</span>
-<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">withDebugger</span> <span class="c">// connect to a devtools monitor via Chrome/Firefox extension if available</span>
-<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">run</span>
-</code></pre></td>
-</tr>
-</table>
-<p>or in case of a remote debugger:</p>
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span class="id">Elmish</span><span class="pn">.</span><span class="id">Debug</span>
-
-<span class="id">Program</span><span class="pn">.</span><span class="id">mkProgram</span> <span class="id">init</span> <span class="id">update</span> <span class="id">view</span>
-<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">withDebuggerAt</span> <span class="pn">(</span><span class="id">Remote</span><span class="pn">(</span><span class="s">&quot;localhost&quot;</span><span class="pn">,</span><span class="n">8000</span><span class="pn">)</span><span class="pn">)</span> <span class="c">// connect to a server running on localhost:8000</span>
-<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">run</span>
-</code></pre></td>
-</tr>
-</table>
-<p>or, using a custom connection:</p>
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-<span class="l">6: </span>
-<span class="l">7: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span class="id">Elmish</span><span class="pn">.</span><span class="id">Debug</span>
-
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">connection</span> <span class="o">=</span> <span class="id">Debugger</span><span class="pn">.</span><span class="id">connect</span> <span class="pn">(</span><span class="id">Remote</span><span class="pn">(</span><span class="s">&quot;localhost&quot;</span><span class="pn">,</span><span class="n">8080</span><span class="pn">)</span><span class="pn">)</span> <span class="c">// obtain the connection, for example if sending some information directly</span>
-
-<span class="id">Program</span><span class="pn">.</span><span class="id">mkProgram</span> <span class="id">init</span> <span class="id">update</span> <span class="id">view</span>
-<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">withDebuggerUsing</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">connection</span>
-<span class="o">|&gt;</span> <span class="id">Program</span><span class="pn">.</span><span class="id">run</span>
-</code></pre></td>
-</tr>
-</table>
-<h3><a name="Conditional-compilation" class="anchor" href="#Conditional-compilation">Conditional compilation</a></h3>
-<p>If don't want to include the debugger in production builds surround it with <code>#if DEBUG</code>/<code>#endif</code> and define the symbol conditionally in your build system.</p>
-
-<div class="tip" id="fs1">val connection : obj</div>
-
-        </div>
-        <div class="span3">
-          <img src="https://elmish.github.io/debugger/img/logo.png" alt="F# Project" style="width:150px;margin:10px" />  
-          <ul class="nav nav-list" id="menu" style="margin-top: 20px;">
-            <li class="nav-header">elmish-debugger</li>
-            <li><a href="https://github.com/elmish/debugger">Source Code on GitHub</a></li>
-            <li class="nav-header">Modules</li>
-            <li><a href="https://elmish.github.io/debugger/debugger.html">Debugger</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </body>
-  </html>
+<html class="has-navbar-fixed-top" lang="en"><head><title>Elmish.Debbuger</title><meta http-equiv="content-type" content="text/html; charset=UTF-8" charSet="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="shortcut icon" href="/debugger/static/img/logo.png"/><link rel="stylesheet" type="text/css" href="/debugger/style.css"/><script src="https://unpkg.com/scroll-into-view-if-needed@2.2.28/umd/scroll-into-view-if-needed.min.js"></script></head><body class="has-footer"><nav class="navbar is-fixed-top is-spaced"><div class="container"><div class="navbar-brand"><a class="navbar-item title is-4" href="https://elmish.github.io/debugger/">Elmish.Debbuger</a></div><div class="navbar-menu"><div class="navbar-start"><div class="navbar-item navbar-burger-dots is-hidden-tablet"><svg height="4" stroke="none" viewBox="0 0 22 4" width="22"><circle cx="2" cy="2" r="2"></circle><circle cx="2" cy="2" r="2" transform="translate(9,0)"></circle><circle cx="2" cy="2" r="2" transform="translate(18,0)"></circle></svg></div></div><div class="navbar-end is-hidden-mobile"><a class="navbar-item" href="https://github.com/elmish/debugger"><span class="icon"><i class=" fab fa-2x fa-github fa-lg"></i></span></a></div></div><div class="nacara-navbar-menu"><a class="nacara-navbar-menu-item" href="https://github.com/elmish/debugger">GitHub</a></div></div></nav><div class="grey-overlay"></div><div class="nacara-content"><div class="container"><div class="columns"><div class="column is-10-desktop is-8-widescreen is-offset-1-desktop is-offset-2-widescreen"><section class="section"><div class="content"><header class="page-header"><div class="columns is-vcentered"><div class="column"></div><div class="column is-narrow"><a class="button is-hidden-touch is-ghost" target="_blank" href="https://github.com/elmish/debugger/edit/v4.x/docs/index.fsx">Edit</a></div></div></header><div><style class=grvsc-styles>.grvsc-container{overflow:auto;position:relative;-webkit-overflow-scrolling:touch;padding-top:1rem;padding-top:var(--grvsc-padding-top,var(--grvsc-padding-v,1rem));padding-bottom:1rem;padding-bottom:var(--grvsc-padding-bottom,var(--grvsc-padding-v,1rem));border-radius:8px;border-radius:var(--grvsc-border-radius,8px);font-feature-settings:normal;line-height:1.4}.grvsc-code{display:table}.grvsc-line{display:table-row;box-sizing:border-box;width:100%;position:relative}.grvsc-line>*{position:relative}.grvsc-gutter-pad{display:table-cell;padding-left:.75rem;padding-left:calc(var(--grvsc-padding-left,var(--grvsc-padding-h,1.5rem))/ 2)}.grvsc-gutter{display:table-cell;-webkit-user-select:none;-moz-user-select:none;user-select:none}.grvsc-gutter::before{content:attr(data-content)}.grvsc-source{display:table-cell;padding-left:1.5rem;padding-left:var(--grvsc-padding-left,var(--grvsc-padding-h,1.5rem));padding-right:1.5rem;padding-right:var(--grvsc-padding-right,var(--grvsc-padding-h,1.5rem))}.grvsc-source:empty::after{content:' ';-webkit-user-select:none;-moz-user-select:none;user-select:none}.grvsc-gutter+.grvsc-source{padding-left:.75rem;padding-left:calc(var(--grvsc-padding-left,var(--grvsc-padding-h,1.5rem))/ 2)}.grvsc-has-line-highlighting>.grvsc-code>.grvsc-line::before{content:' ';position:absolute;width:100%}.grvsc-line-diff-add::before{background-color:var(--grvsc-line-diff-add-background-color,rgba(0,255,60,.2))}.grvsc-line-diff-del::before{background-color:var(--grvsc-line-diff-del-background-color,rgba(255,0,20,.2))}.grvsc-line-number{padding:0 2px;text-align:right;opacity:.7}.atom-one-light{background-color:#fafafa;color:#383a42}.atom-one-light .mtki{font-style:italic}.atom-one-light .mtk1{color:#383a42}.atom-one-light .mtk14{color:#a626a4}.atom-one-light .mtk9{color:#4078f2}.atom-one-light .mtk7{color:#a0a1a7}.atom-one-light .mtk10{color:#50a14f}.atom-one-light .mtk6{color:#986801}.atom-one-light .mtk5{color:#e45649}.atom-one-light .grvsc-line-highlighted::before{background-color:var(--grvsc-line-highlighted-background-color,rgba(0,0,0,.05));box-shadow:inset var(--grvsc-line-highlighted-border-width,4px) 0 0 0 var(--grvsc-line-highlighted-border-color,rgba(0,0,0,.2))}</style><h2 id=remote-devtools-debugger>Remote DevTools debugger<a href=#remote-devtools-debugger aria-hidden=true tabindex=-1><span class=[anchor]></span>#</a></h2><p>Elmish applications can benefit from sophisiticated time-travelling debuger with deep state and message inspection capabilities and import/export functionality. Wether you target browser, native or any other platform, as long as you can connect to a monitor you can start collecting and visualizing the events. For SPAs running in a browser, it's as easy as installing a plugin.<p><img alt=dbg src=https://github.com/zalmoxisus/remotedev/raw/master/demo.gif><h3 id=installation>Installation<a href=#installation aria-hidden=true tabindex=-1><span class=[anchor]></span>#</a></h3><p>Add Remote DevTools client package as a devDependency:<pre class="atom-one-light grvsc-container"data-index=0 data-language=sh><code class=grvsc-code><span class=grvsc-line><span class=grvsc-source><span class=mtk1>yarn add remotedev@^0.2.4 -D</span></span></span></code></pre><p>and add Fable package:<pre class="atom-one-light grvsc-container"data-index=1 data-language=sh><code class=grvsc-code><span class=grvsc-line><span class=grvsc-source><span class=mtk1>dotnet add package Fable.Elmish.Debugger</span></span></span></code></pre><p>Follow the monitor installation instructions at <a href=https://github.com/zalmoxisus/remotedev>Remotedev tools</a> site.<p>Among all the monitoring apps mentioned there, for local web debugging in Chrome we recommend using <a href=https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd>Redux DevTools Chrome extension</a> as the fastest and the most seamless monitoring option.<h3 id=program-module-functions>Program module functions<a href=#program-module-functions aria-hidden=true tabindex=-1><span class=[anchor]></span>#</a></h3><p>Augment your program instance with a debugger, making sure it's the last item in the line of <code>Program</code> modifications:<p>Usage:<pre class="atom-one-light grvsc-container"data-index=2 data-language=fs><code class=grvsc-code><span class=grvsc-line><span class=grvsc-source><span class=mtk14>open</span><span class=mtk1> </span><span class=mtk9>Elmish.Debug</span></span></span>
+<span class=grvsc-line><span class=grvsc-source></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk1>Program.mkProgram init update view</span></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>|></span><span class=mtk1> Program.withDebugger </span><span class="mtk7 mtki">// connect to a devtools monitor via Chrome/Firefox extension if available</span></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>|></span><span class=mtk1> Program.run</span></span></span></code></pre><p>or in case of a remote debugger:<pre class="atom-one-light grvsc-container"data-index=3 data-language=fs><code class=grvsc-code><span class=grvsc-line><span class=grvsc-source><span class=mtk14>open</span><span class=mtk1> </span><span class=mtk9>Elmish.Debug</span></span></span>
+<span class=grvsc-line><span class=grvsc-source></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk1>Program.mkProgram init update view</span></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>|></span><span class=mtk1> Program.withDebuggerAt </span><span class=mtk14>(</span><span class=mtk1>Debugger.Remote</span><span class=mtk14>(</span><span class=mtk10>"localhost"</span><span class=mtk14>,</span><span class=mtk6>8000</span><span class=mtk14>))</span><span class=mtk1> </span><span class="mtk7 mtki">// connect to a server running on localhost:8000</span></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>|></span><span class=mtk1> Program.run</span></span></span></code></pre><p>or, using a custom connection:<pre class="atom-one-light grvsc-container"data-index=4 data-language=fs><code class=grvsc-code><span class=grvsc-line><span class=grvsc-source><span class=mtk14>open</span><span class=mtk1> </span><span class=mtk9>Elmish.Debug</span></span></span>
+<span class=grvsc-line><span class=grvsc-source></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>let</span><span class=mtk1> </span><span class=mtk5>connection</span><span class=mtk1> </span><span class=mtk14>=</span><span class=mtk1> Debugger.connect </span><span class=mtk14>(</span><span class=mtk1>Debugger.Remote</span><span class=mtk14>(</span><span class=mtk10>"localhost"</span><span class=mtk14>,</span><span class=mtk6>8080</span><span class=mtk14>))</span><span class=mtk1> </span><span class="mtk7 mtki">// obtain the connection, for example if sending some information directly</span></span></span>
+<span class=grvsc-line><span class=grvsc-source></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk1>Program.mkProgram init update view</span></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>|></span><span class=mtk1> Program.withDebuggerConnection connection</span></span></span>
+<span class=grvsc-line><span class=grvsc-source><span class=mtk14>|></span><span class=mtk1> Program.run</span></span></span></code></pre><h3 id=conditional-compilation>Conditional compilation<a href=#conditional-compilation aria-hidden=true tabindex=-1><span class=[anchor]></span>#</a></h3><p>If don't want to include the debugger in production builds surround it with <code>#if DEBUG</code>/<code>#endif</code> and define the symbol conditionally in your build system.</div></div></section></div></div></div></div><script async="" src="/debugger/resources/nacara-standard-layouts/scripts/menu.js"></script><footer class="footer"><div class="is-size-5"><div class="sitemap"><div class="sitemap-section"><div class="sitemap-section-title">Project ressources</div><ul class="sitemap-section-list"><li><a href="https://github.com/elmish/debugger" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fas fa-file-code"></i></span><span class="sitemap-section-list-item-text">Repository</span></a></li><li><a href="/debugger/release_notes.html" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fas fa-list"></i></span><span class="sitemap-section-list-item-text">Release notes</span></a></li><li><a href="https://github.com/elmish/debugger/blob/v4.x/LICENSE.md" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fas fa-id-card"></i></span><span class="sitemap-section-list-item-text">License</span></a></li></ul></div><div class="sitemap-section"><div class="sitemap-section-title">Elmish modules</div><ul class="sitemap-section-list"><li><a href="https://elmish.github.io/elmish/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fa fa-book"></i></span><span class="sitemap-section-list-item-text">Fable.Elmish</span></a></li><li><a href="https://elmish.github.io/browser/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fa fa-book"></i></span><span class="sitemap-section-list-item-text">Fable.Elmish.Browser</span></a></li><li><a href="https://elmish.github.io/urlParser/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fa fa-book"></i></span><span class="sitemap-section-list-item-text">Fable.Elmish.UrlParser</span></a></li><li><a href="https://elmish.github.io/debugger/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fa fa-book"></i></span><span class="sitemap-section-list-item-text">Fable.Elmish.Debugger</span></a></li><li><a href="https://elmish.github.io/react/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fa fa-book"></i></span><span class="sitemap-section-list-item-text">Fable.Elmish.React</span></a></li><li><a href="https://elmish.github.io/hmr/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fa fa-book"></i></span><span class="sitemap-section-list-item-text">Fable.Elmish.HMR</span></a></li></ul></div><div class="sitemap-section"><div class="sitemap-section-title">Other Links</div><ul class="sitemap-section-list"><li><a href="https://fable.io" class="icon-text sitemap-section-list-item"><span class="icon"><i class="faf faf-fable"></i></span><span class="sitemap-section-list-item-text">Fable</span></a></li><li><a href="https://gitter.im/fable-compiler/Fable" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fab fa-gitter"></i></span><span class="sitemap-section-list-item-text">Fable Gitter</span></a></li><li><a href="https://fsharp.org/guides/slack/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="fab fa-slack"></i></span><span class="sitemap-section-list-item-text">F# Slack</span></a></li><li><a href="https://fsharp.org/" class="icon-text sitemap-section-list-item"><span class="icon"><i class="faf faf-fsharp-org"></i></span><span class="sitemap-section-list-item-text">F# Software Foundation</span></a></li></ul></div></div><p class="has-text-centered">Built with <a class="is-underlined" href="https://mangelmaxime.github.io/Nacara/">Nacara</a></p><p class="has-text-centered mt-2">Copyright © 2021-<span id="copyright-end-year"></span> Elmish contributors.</p><script>
+        const year = new Date().getFullYear();
+        document.getElementById('copyright-end-year').innerHTML = year;
+        </script></div></footer></body></html>
