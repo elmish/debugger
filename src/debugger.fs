@@ -93,31 +93,32 @@ module Program =
             connection.send(msg, deflater model')
             (model',cmd)
 
-        let subscribe userSubscribe model =
-            let sub dispatch =
-                function
-                | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
-                    try
-                        match msg.payload.``type`` with
-                        | PayloadTypes.JumpToAction
-                        | PayloadTypes.JumpToState ->
-                            let state = extractState msg |> inflater
-                            Program.setState program state dispatch
-                        | PayloadTypes.ImportState ->
-                            let state = msg.payload.nextLiftedState.computedStates |> Array.last
-                            let state = inflater state?state
-                            Program.setState program state dispatch
-                            connection.send(null, msg.payload.nextLiftedState)
-                        | _ -> ()
-                    with ex ->
-                        Debugger.showError ["Unable to process monitor command"; ex.Message; msg]
-                | _ -> ()
-                |> connection.subscribe
-                |> ignore
+        let sub dispatch =
+            function
+            | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
+                try
+                    match msg.payload.``type`` with
+                    | PayloadTypes.JumpToAction
+                    | PayloadTypes.JumpToState ->
+                        let state = extractState msg |> inflater
+                        Program.setState program state dispatch
+                    | PayloadTypes.ImportState ->
+                        let state = msg.payload.nextLiftedState.computedStates |> Array.last
+                        let state = inflater state?state
+                        Program.setState program state dispatch
+                        connection.send(null, msg.payload.nextLiftedState)
+                    | _ -> ()
+                with ex ->
+                    Debugger.showError ["Unable to process monitor command"; ex.Message; msg]
+            | _ -> ()
+            |> connection.subscribe
+            |> fun unsub -> { new System.IDisposable with
+                                member _.Dispose() = unsub() }
 
-            Cmd.batch
-                [ [sub]
-                  userSubscribe model ]
+        let subscribe userSubscribe model =
+            Sub.batch
+                [ [["debugger"],sub]
+                  userSubscribe model |> Sub.map "user" id ]
 
         let onError userOnError (text,ex: exn) =
             userOnError (text, ex)
