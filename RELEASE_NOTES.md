@@ -1,3 +1,7 @@
+## 4.0.0-beta-2
+
+* New subscriptions support
+
 ## 4.0.0-beta-1
 
 * Elmish 4.0 support
