@@ -1,3 +1,6 @@
+## 4.0.0
+* Breaking: elmish v4 subscriptions support
+
 ## 4.0.0-beta-2
 
 * New subscriptions support

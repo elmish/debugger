@@ -5,7 +5,7 @@ install:
   - ps: dotnet tool restore
 
 build_script:
-  - cmd: dotnet fake build
+  - cmd: dotnet fsi build.fsx
 
 cache:
 - "%LOCALAPPDATA%\\Yarn"
