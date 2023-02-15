@@ -25,6 +25,7 @@ module RemoteDev =
           port : int
           hostname : string
           secure : bool
+          name: string
           getActionType : ('msg->obj) option }
 
     type Action =
