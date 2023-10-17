@@ -14,7 +14,7 @@ module Debugger =
     let showWarning (msgs: obj list) = JS.console.warn("[ELMISH DEBUGGER]", List.toArray msgs)
 
     type ConnectionOptions =
-        | ViaExtension
+        | ViaExtension of name:string
         | Remote of address:string * port:int
         | Secure of address:string * port:int
 
@@ -41,10 +41,11 @@ module Debugger =
                          hostname = "remotedev.io"
                          port = 443
                          secure = true
+                         name = "Elmish"
                          getActionType = Some getCase }
 
         match opt with
-        | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
+        | ViaExtension name -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false ; name = name}
         | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false }
         | Secure (address,port) -> { fallback with hostname = address; port = port }
         |> connectViaExtension
@@ -137,7 +138,7 @@ module Program =
 
     let inline withDebuggerCoders (encoder: Encoder<'model>) (decoder: Decoder<'model>) program : Program<'a,'model,'msg,'view> =
         let deflater, inflater = getTransformersWith encoder decoder
-        let connection = Debugger.connect<'msg> Debugger.ViaExtension
+        let connection = Debugger.connect<'msg> (Debugger.ViaExtension "Elmish")
         withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
@@ -148,12 +149,16 @@ module Program =
         with ex ->
             Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
             program
+            
+    let inline withDebuggerName (name:string) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+            try
+                let deflater, inflater = getTransformers<'model>()
+                let connection = Debugger.connect<'msg> (Debugger.ViaExtension name)
+                withDebuggerUsing deflater inflater connection program
+            with ex ->
+                Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
+                program
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
-        try
-            let deflater, inflater = getTransformers<'model>()
-            let connection = Debugger.connect<'msg> Debugger.ViaExtension
-            withDebuggerUsing deflater inflater connection program
-        with ex ->
-            Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
-            program
+        withDebuggerName "Elmish" program
+    
