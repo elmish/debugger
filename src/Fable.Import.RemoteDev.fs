@@ -1,6 +1,5 @@
 namespace Fable.Import
 
-open System
 open Fable.Core
 
 module RemoteDev =
@@ -21,8 +20,7 @@ module RemoteDev =
         let JumpToAction = "JUMP_TO_ACTION"
 
     type Options<'msg> =
-        { remote : bool
-          port : int
+        { port : int
           hostname : string
           secure : bool
           getActionType : ('msg->obj) option }
@@ -61,7 +59,7 @@ module RemoteDev =
     [<Import("connect","remotedev")>]
     let connect<'msg> (options: Options<'msg>): Connection = jsNative
 
-    [<Import("connectViaExtension","remotedev")>]
+    [<Emit("window.__REDUX_DEVTOOLS_EXTENSION__.connect($0)")>]
     let connectViaExtension<'msg> (options: Options<'msg>): Connection = jsNative
 
     [<Import("extractState","remotedev")>]

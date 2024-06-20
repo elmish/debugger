@@ -1,6 +1,5 @@
 namespace Elmish.Debug
 
-open Fable.Import
 open Fable.Import.RemoteDev
 open Fable.Core.JsInterop
 open Fable.Core
@@ -8,8 +7,6 @@ open Thoth.Json
 
 [<RequireQualifiedAccess>]
 module Debugger =
-    open FSharp.Reflection
-
     let showError (msgs: obj list) = JS.console.error("[ELMISH DEBUGGER]", List.toArray msgs)
     let showWarning (msgs: obj list) = JS.console.warn("[ELMISH DEBUGGER]", List.toArray msgs)
 
@@ -37,17 +34,21 @@ module Debugger =
             else
                 makeMsgObj("NOT-AN-F#-UNION", x)
 
-        let fallback = { Options.remote = true
-                         hostname = "remotedev.io"
+        let fallback = { hostname = "remotedev.io"
                          port = 443
                          secure = true
                          getActionType = Some getCase }
 
         match opt with
-        | ViaExtension -> { fallback with remote = false; hostname = "localhost"; port = 8000; secure = false }
-        | Remote (address,port) -> { fallback with hostname = address; port = port; secure = false }
-        | Secure (address,port) -> { fallback with hostname = address; port = port }
-        |> connectViaExtension
+        | ViaExtension ->
+            { fallback with hostname = "localhost"; port = 8000; secure = false }
+            |> connectViaExtension
+        | Remote (address,port) ->
+            { fallback with hostname = address; port = port; secure = false }
+            |> connect
+        | Secure (address,port) ->
+            { fallback with hostname = address; port = port }
+            |> connect
 
     type Send<'msg,'model> = 'msg*'model -> unit
 
