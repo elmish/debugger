@@ -1,4 +1,9 @@
+## 4.1.0
+
+* Allow using Redux Devtools directly without remotedev
+
 ## 4.0.0
+
 * Breaking: elmish v4 subscriptions support
 
 ## 4.0.0-beta-2
