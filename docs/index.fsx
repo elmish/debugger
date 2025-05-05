@@ -20,7 +20,7 @@ open Elmish
 
 ## Remote DevTools debugger
 
-Elmish applications can benefit from sophisiticated time-travelling debuger with deep state and message inspection capabilities and import/export functionality.
+Elmish applications can benefit from sophisticated time-travelling debugger with deep state and message inspection capabilities and import/export functionality.
 Wether you target browser, native or any other platform, as long as you can connect to a monitor you can start collecting and visualizing the events.
 For SPAs running in a browser, it's as easy as installing a plugin.
 
