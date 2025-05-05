@@ -28,12 +28,18 @@ For SPAs running in a browser, it's as easy as installing a plugin.
 
 
 ### Installation
-Add Remote DevTools client package as a devDependency:
+For local debugging using the Redux DevTools browser extension add the following devDependency:
+
+```sh
+yarn add jsan@^3.1.14 -D
+```
+
+For connecting to a remote debugger add the Remote DevTools client package as a devDependency:
 ```sh
 yarn add remotedev@^0.2.4 -D
 ```
 
-and add Fable package:
+Then add Fable package:
 
 ```sh
 dotnet add package Fable.Elmish.Debugger
