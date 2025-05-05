@@ -62,5 +62,8 @@ module RemoteDev =
     [<Emit("window.__REDUX_DEVTOOLS_EXTENSION__.connect($0)")>]
     let connectViaExtension<'msg> (options: Options<'msg>): Connection = jsNative
 
-    [<Import("extractState","remotedev")>]
-    let extractState (x: obj): obj = jsNative
+    [<Import("parse","jsan")>]
+    let parse (x: string): obj = jsNative
+
+    let extractState message =
+        parse message.state
