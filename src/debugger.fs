@@ -46,9 +46,8 @@ module Debugger =
             { fallback with hostname = address; port = port }
             |> connect
 
-    let inline connectViaExtension<'msg> =
-        { fallback with hostname = "localhost"; port = 8000; secure = false }
-        |> connectViaExtension
+    let inline connectViaExtension options =
+        connectViaExtension options
 
     type Send<'msg,'model> = 'msg*'model -> unit
 
@@ -138,7 +137,7 @@ module Program =
 
     let inline withDebuggerCoders (encoder: Encoder<'model>) (decoder: Decoder<'model>) program : Program<'a,'model,'msg,'view> =
         let deflater, inflater = getTransformersWith encoder decoder
-        let connection = Debugger.connectViaExtension<'msg>
+        let connection = Debugger.connectViaExtension createEmpty
         withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
@@ -150,11 +149,14 @@ module Program =
             Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
             program
 
-    let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline withDebuggerOptions (options: ExtensionOptions) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
             let deflater, inflater = getTransformers<'model>()
-            let connection = Debugger.connectViaExtension<'msg>
+            let connection = Debugger.connectViaExtension options
             withDebuggerUsing deflater inflater connection program
         with ex ->
             Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
             program
+
+    let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+        withDebuggerOptions createEmpty program

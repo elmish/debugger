@@ -25,6 +25,14 @@ module RemoteDev =
           secure : bool
           getActionType : ('msg->obj) option }
 
+    [<Global>]
+    type ExtensionOptions
+        [<ParamObject; Emit("$0")>]
+        (
+            name: string
+        ) =
+        member val name: string = jsNative with get, set
+
     type Action =
         { ``type``: string
           fields : obj array }
@@ -60,7 +68,7 @@ module RemoteDev =
     let connect<'msg> (options: Options<'msg>): Connection = jsNative
 
     [<Emit("window.__REDUX_DEVTOOLS_EXTENSION__.connect($0)")>]
-    let connectViaExtension<'msg> (options: Options<'msg>): Connection = jsNative
+    let connectViaExtension (options: ExtensionOptions): Connection = jsNative
 
     [<Import("parse","jsan")>]
     let parse (x: string): obj = jsNative
