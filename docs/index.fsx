@@ -64,6 +64,21 @@ Program.mkProgram init update view
 
 (**
 
+the extension options can be configured as follows (currently only `name` is supported) :
+
+*)
+
+
+open Elmish.Debug
+open Fable.Import.RemoteDev
+
+Program.mkProgram init update view
+|> Program.withDebuggerOptions (new ExtensionOptions(name = "Elmish Debugger"))
+|> Program.run
+
+
+(**
+
 or in case of a remote debugger:
 
 *)
