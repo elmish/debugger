@@ -1,3 +1,7 @@
+## 4.2.0
+
+* Connect to local extension with only 'jsan`, thanks to @mardukbp
+
 ## 4.1.0
 
 * Allow using Redux Devtools directly without remotedev
