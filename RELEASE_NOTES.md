@@ -1,3 +1,7 @@
+## 4.2.1
+
+* Fix regression in treatment of action types, thanks to @mardukbp
+
 ## 4.2.0
 
 * Connect to local extension with only 'jsan`, thanks to @mardukbp
