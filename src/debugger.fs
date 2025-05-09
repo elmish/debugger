@@ -47,7 +47,7 @@ module Debugger =
             |> connect
 
     let inline connectViaExtension (options: ExtensionOptions) =
-        options.getActionType <- getCase
+        options.getActionType <- Some getCase
         connectViaExtension options
 
     type Send<'msg,'model> = 'msg*'model -> unit
