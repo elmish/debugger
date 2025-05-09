@@ -46,7 +46,8 @@ module Debugger =
             { fallback with hostname = address; port = port }
             |> connect
 
-    let inline connectViaExtension options =
+    let inline connectViaExtension (options: ExtensionOptions) =
+        options.getActionType <- Some getCase
         connectViaExtension options
 
     type Send<'msg,'model> = 'msg*'model -> unit
@@ -137,7 +138,7 @@ module Program =
 
     let inline withDebuggerCoders (encoder: Encoder<'model>) (decoder: Decoder<'model>) program : Program<'a,'model,'msg,'view> =
         let deflater, inflater = getTransformersWith encoder decoder
-        let connection = Debugger.connectViaExtension createEmpty
+        let connection = Debugger.connectViaExtension (new ExtensionOptions())
         withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
@@ -159,4 +160,4 @@ module Program =
             program
 
     let inline withDebugger (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
-        withDebuggerOptions createEmpty program
+        withDebuggerOptions (new ExtensionOptions()) program

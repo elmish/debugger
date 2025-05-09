@@ -29,9 +29,11 @@ module RemoteDev =
     type ExtensionOptions
         [<ParamObject; Emit("$0")>]
         (
-            name: string
+            ?getActionType: obj -> obj,
+            ?name: string
         ) =
-        member val name: string = jsNative with get, set
+        member val getActionType: (obj -> obj) option = jsNative with get, set
+        member val name: string option = jsNative with get, set
 
     type Action =
         { ``type``: string
