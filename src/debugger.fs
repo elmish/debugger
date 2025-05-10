@@ -3,6 +3,7 @@ namespace Elmish.Debug
 open Fable.Import.RemoteDev
 open Fable.Core.JsInterop
 open Fable.Core
+open Microsoft.FSharp.Reflection
 open Thoth.Json
 
 [<RequireQualifiedAccess>]
@@ -90,7 +91,11 @@ module Program =
             Debugger.showWarning [er.Message]
             box, fun _ -> failwith "Cannot inflate model"
 
-    let withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+        let constructMessage name args : 'msg =
+            let cases = Map.ofSeq [for case in FSharpType.GetUnionCases typeof<'msg> -> case.Name, case]
+            FSharpValue.MakeUnion(cases[name], args) :?> 'msg
+        
         let init userInit a =
             let (model,cmd) = userInit a
             connection.init (deflater model, None)
@@ -103,6 +108,8 @@ module Program =
 
         let sub dispatch =
             function
+            | (msg:Msg) when msg.``type`` = MsgTypes.Action ->
+              dispatch (constructMessage msg.payload?name msg.payload?args)
             | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
                 try
                     match msg.payload.``type`` with
