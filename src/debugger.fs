@@ -46,8 +46,15 @@ module Debugger =
             { fallback with hostname = address; port = port }
             |> connect
 
-    let inline connectViaExtension (options: ExtensionOptions) =
+    let inline connectViaExtension<'msg> (options: ExtensionOptions) =
+        let actionCreators =
+            typeof<'msg>
+            |> FSharpType.GetUnionCases
+            |> Array.map (fun case ->
+                new ActionCreator(name = case.Name, args = (case.GetFields() |> Array.map (fun fieldInfo -> fieldInfo.Name))))
+
         options.getActionType <- Some getCase
+        if options.actionCreators.IsNone then options.actionCreators <- Some actionCreators
         connectViaExtension options
 
     type Send<'msg,'model> = 'msg*'model -> unit
@@ -138,7 +145,7 @@ module Program =
 
     let inline withDebuggerCoders (encoder: Encoder<'model>) (decoder: Decoder<'model>) program : Program<'a,'model,'msg,'view> =
         let deflater, inflater = getTransformersWith encoder decoder
-        let connection = Debugger.connectViaExtension (new ExtensionOptions())
+        let connection = Debugger.connectViaExtension<'msg> (new ExtensionOptions())
         withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
@@ -153,7 +160,7 @@ module Program =
     let inline withDebuggerOptions (options: ExtensionOptions) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
             let deflater, inflater = getTransformers<'model>()
-            let connection = Debugger.connectViaExtension options
+            let connection = Debugger.connectViaExtension<'msg> options
             withDebuggerUsing deflater inflater connection program
         with ex ->
             Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]
