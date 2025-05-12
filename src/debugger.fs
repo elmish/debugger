@@ -3,6 +3,7 @@ namespace Elmish.Debug
 open Fable.Import.RemoteDev
 open Fable.Core.JsInterop
 open Fable.Core
+open Microsoft.FSharp.Reflection
 open Thoth.Json
 
 [<RequireQualifiedAccess>]
@@ -46,8 +47,15 @@ module Debugger =
             { fallback with hostname = address; port = port }
             |> connect
 
-    let inline connectViaExtension (options: ExtensionOptions) =
+    let inline connectViaExtension<'msg> (options: ExtensionOptions) =
+        let actionCreators =
+            typeof<'msg>
+            |> FSharpType.GetUnionCases
+            |> Array.map (fun case ->
+                new ActionCreator(name = case.Name, args = (case.GetFields() |> Array.map (fun fieldInfo -> fieldInfo.Name))))
+
         options.getActionType <- Some getCase
+        if options.actionCreators.IsNone then options.actionCreators <- Some actionCreators
         connectViaExtension options
 
     type Send<'msg,'model> = 'msg*'model -> unit
@@ -83,7 +91,11 @@ module Program =
             Debugger.showWarning [er.Message]
             box, fun _ -> failwith "Cannot inflate model"
 
-    let withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+    let inline withDebuggerUsing (deflater: 'model->obj) (inflater: obj->'model) (connection:Connection) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
+        let constructMessage name args : 'msg =
+            let cases = Map.ofSeq [for case in FSharpType.GetUnionCases typeof<'msg> -> case.Name, case]
+            FSharpValue.MakeUnion(cases[name], args) :?> 'msg
+        
         let init userInit a =
             let (model,cmd) = userInit a
             connection.init (deflater model, None)
@@ -96,6 +108,8 @@ module Program =
 
         let sub dispatch =
             function
+            | (msg:Msg) when msg.``type`` = MsgTypes.Action ->
+              dispatch (constructMessage msg.payload?name msg.payload?args)
             | (msg:Msg) when msg.``type`` = MsgTypes.Dispatch ->
                 try
                     match msg.payload.``type`` with
@@ -138,7 +152,7 @@ module Program =
 
     let inline withDebuggerCoders (encoder: Encoder<'model>) (decoder: Decoder<'model>) program : Program<'a,'model,'msg,'view> =
         let deflater, inflater = getTransformersWith encoder decoder
-        let connection = Debugger.connectViaExtension (new ExtensionOptions())
+        let connection = Debugger.connectViaExtension<'msg> (new ExtensionOptions())
         withDebuggerUsing deflater inflater connection program
 
     let inline withDebuggerAt options program : Program<'a,'model,'msg,'view> =
@@ -153,7 +167,7 @@ module Program =
     let inline withDebuggerOptions (options: ExtensionOptions) (program : Program<'a,'model,'msg,'view>) : Program<'a,'model,'msg,'view> =
         try
             let deflater, inflater = getTransformers<'model>()
-            let connection = Debugger.connectViaExtension options
+            let connection = Debugger.connectViaExtension<'msg> options
             withDebuggerUsing deflater inflater connection program
         with ex ->
             Debugger.showError ["Unable to connect to the monitor, continuing w/o debugger"; ex.Message]

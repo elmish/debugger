@@ -26,12 +26,24 @@ module RemoteDev =
           getActionType : ('msg->obj) option }
 
     [<Global>]
+    type ActionCreator
+        [<ParamObject; Emit("$0")>]
+        (
+            args: string[],
+            name: string
+        ) =
+        member val args: string[] = jsNative with get, set
+        member val name: string = jsNative with get, set
+
+    [<Global>]
     type ExtensionOptions
         [<ParamObject; Emit("$0")>]
         (
+            ?actionCreators: ActionCreator[],
             ?getActionType: obj -> obj,
             ?name: string
         ) =
+        member val actionCreators: ActionCreator[] option = jsNative with get, set
         member val getActionType: (obj -> obj) option = jsNative with get, set
         member val name: string option = jsNative with get, set
 
